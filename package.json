@@ -1,0 +1,49 @@
+{
+  "name": "@jbstavers/pinot-pi",
+  "displayName": "Pinot",
+  "version": "0.1.0",
+  "description": "A workflow package for Pi coding-agent sessions.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "keywords": [
+    "pi-package"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "package:dry-run": "npm pack --dry-run --json"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/pinot.ts"
+    ],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  },
+  "files": [
+    "AGENTS.md",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "docs/",
+    "extensions/",
+    "src/",
+    "templates/",
+    "package.json"
+  ]
+}

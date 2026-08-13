@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
++*
+
+# Local mutable Pinot state must never live in the package checkout.
+.pinot-pi/

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "models": {
+    "scout": "",
+    "assessor": "",
+    "second-opinion": "",
+    "implementer": "",
+    "reviewer": "",
+    "verifier": ""
+  },
+  "implementerEffort": {
+    "standard": "",
+    "maximum": ""
+  }
+}
