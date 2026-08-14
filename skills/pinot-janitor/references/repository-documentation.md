@@ -6,4 +6,4 @@ Record only behavior supported by current implementation, tests, configuration, 
 
 During closeout or docs review, document permanent application logging when it exists: predictable log location, retention/rotation and cleanup, configuration path/settings/defaults, optional debug enablement, lifecycle events, and privacy boundary. Distinguish permanent application logs/config from temporary diagnostic/test logs; never delete application logs as cleanup.
 
-For `/pinot-debrief`, preserve history-first lookup: the index points to a selected record, and the record points to project, commits, safe spec/plan snapshots, semantic provenance, review/verification, deviations, remaining work, Janitor maintenance, and optional aggregate ledger periods. Missing history or ledger data is a bounded fallback, not proof of absence.
+For `/pinot-debrief`, preserve history-first lookup: the index points to a selected record, and the record points to project, commits, safe specification/plan snapshots, semantic provenance, review/verification, deviations, remaining work, Janitor maintenance, and Debrief lookup pointers. Missing history is a bounded fallback, not proof of absence.

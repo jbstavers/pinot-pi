@@ -8,7 +8,6 @@ export interface SetupTemplates {
   config: string;
   historyIndex: string;
   historyRecord: string;
-  ledgerReadme: string;
 }
 
 export interface SetupResult {
@@ -32,22 +31,20 @@ const TEMPLATE_FILES = {
   config: "pinot-config.json",
   historyIndex: "implementation-history/index.md",
   historyRecord: "implementation-history/record-template.md",
-  ledgerReadme: "subagent-use-ledger/README.md",
 } as const;
 
 export async function loadPackageTemplates(): Promise<SetupTemplates> {
   const root = fileURLToPath(new URL("../../templates/", import.meta.url));
-  const [config, historyIndex, historyRecord, ledgerReadme] = await Promise.all(
+  const [config, historyIndex, historyRecord] = await Promise.all(
     Object.values(TEMPLATE_FILES).map((relative) => readFile(join(root, relative), "utf8")),
   );
-  return { config, historyIndex, historyRecord, ledgerReadme };
+  return { config, historyIndex, historyRecord };
 }
 
 export async function setupState(paths: StatePaths, templates: SetupTemplates = {
   config: serializePinotConfig(),
   historyIndex: "# Implementation history\n",
   historyRecord: "# Implementation record\n",
-  ledgerReadme: "# Subagent-use ledger state\n",
 }): Promise<SetupResult> {
   await preflightState(paths);
   const created: string[] = [];
@@ -56,12 +53,9 @@ export async function setupState(paths: StatePaths, templates: SetupTemplates = 
   await ensureDirectory(paths.implementationRoot, "implementer", created);
   await ensureDirectory(paths.implementationSessions, "implementer/sessions", created);
   await ensureDirectory(paths.implementationCheckpoints, "implementer/checkpoints", created);
-  await ensureDirectory(paths.ledger, "subagent-use-ledger", created);
-  await ensureDirectory(paths.ledgerReports, "subagent-use-ledger/reports", created);
   await ensureFile(paths.config, templates.config, "config.json", created, true);
   await ensureFile(join(paths.implementationHistory, "index.md"), templates.historyIndex, "implementation-history/index.md", created, false);
   await ensureFile(join(paths.implementationHistory, "record-template.md"), templates.historyRecord, "implementation-history/record-template.md", created, false);
-  await ensureFile(join(paths.ledger, "README.md"), templates.ledgerReadme, "subagent-use-ledger/README.md", created, false);
   return { paths, created };
 }
 
@@ -73,8 +67,6 @@ export async function inspectState(paths: StatePaths): Promise<StateStatus> {
     [paths.implementationRoot, "implementer"],
     [paths.implementationSessions, "implementer/sessions"],
     [paths.implementationCheckpoints, "implementer/checkpoints"],
-    [paths.ledger, "subagent-use-ledger"],
-    [paths.ledgerReports, "subagent-use-ledger/reports"],
   ] as const;
   const entries = await Promise.all(pathsToInspect.map(([path, label]) => inspectPath(path, label)));
   let config: StateStatus["config"] = "missing";
@@ -115,12 +107,9 @@ async function preflightState(paths: StatePaths): Promise<void> {
   await preflightDirectory(paths.implementationRoot, "implementer");
   await preflightDirectory(paths.implementationSessions, "implementer/sessions");
   await preflightDirectory(paths.implementationCheckpoints, "implementer/checkpoints");
-  await preflightDirectory(paths.ledger, "subagent-use-ledger");
-  await preflightDirectory(paths.ledgerReports, "subagent-use-ledger/reports");
   await preflightFile(paths.config, "config.json");
   await preflightFile(join(paths.implementationHistory, "index.md"), "implementation-history/index.md");
   await preflightFile(join(paths.implementationHistory, "record-template.md"), "implementation-history/record-template.md");
-  await preflightFile(join(paths.ledger, "README.md"), "subagent-use-ledger/README.md");
 }
 
 async function preflightDirectory(path: string, label: string): Promise<void> {

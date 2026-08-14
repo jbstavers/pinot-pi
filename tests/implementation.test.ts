@@ -280,7 +280,7 @@ describe("synthetic Herdr implementer lifecycle", () => {
     const agentStartFailures = new Set(["agent-start-failure", "agent-start-cleanup-failure"]);
     const invalidAgentStarts = new Set(["agent-start-invalid"]);
     let paneNumber = 0;
-    let unit3Started = false;
+    let lifecycleStarted = false;
     let accelerateGuardTimeout = false;
     let clock = Date.now();
     const now = () => clock;
@@ -348,8 +348,8 @@ describe("synthetic Herdr implementer lifecycle", () => {
         const sessionDirectory = args[args.indexOf("--session-dir") + 1];
         const path = await ensureSyntheticSession(name, sessionDirectory, profileByPane.get(paneId) ?? "implementation");
         agents.set(name, { name, pane_id: paneId, cwd, foreground_cwd: cwd, agent_status: "idle", agent_session_path: path });
-        if (name === "unit3" && !unit3Started) {
-          unit3Started = true;
+        if (name === "lifecycle" && !lifecycleStarted) {
+          lifecycleStarted = true;
           stillWorkingOnce.add(name);
         }
         return { code: 0, stdout: JSON.stringify({ result: { agent: agents.get(name) } }), stderr: "" };
@@ -434,50 +434,50 @@ describe("synthetic Herdr implementer lifecycle", () => {
       expect(cleanupResult.code).toBe(0);
       expect(panes.has("pane-4")).toBe(false);
 
-      const started = await run({ action: "start", name: "unit3", assignment: "bounded synthetic assignment" });
+      const started = await run({ action: "start", name: "lifecycle", assignment: "bounded synthetic assignment" });
       expect(started.content).toContain("still working");
       expect(started.content).not.toContain("Checkpoint-v4:");
       expect(started.details.host?.status).toBe("working");
       expect(started.details.profile).toBe("implementation");
-      expect(agentStartArguments.get("unit3")).not.toContain("--skill");
-      await expect(run({ action: "close", name: "unit3" })).rejects.toThrow(/still working/);
+      expect(agentStartArguments.get("lifecycle")).not.toContain("--skill");
+      await expect(run({ action: "close", name: "lifecycle" })).rejects.toThrow(/still working/);
 
-      const waited = await run({ action: "wait", name: "unit3" });
+      const waited = await run({ action: "wait", name: "lifecycle" });
       expect(waited.details.checkpoint).toMatchObject({ present: true, fresh: null });
       expect(waited.content).toContain("Checkpoint-v4:");
-      await appendSyntheticGuard("unit3", "pending-handoff", "started");
+      await appendSyntheticGuard("lifecycle", "pending-handoff", "started");
       accelerateGuardTimeout = true;
-      await expect(run({ action: "wait", name: "unit3" })).rejects.toThrow(/guard markers did not settle/);
+      await expect(run({ action: "wait", name: "lifecycle" })).rejects.toThrow(/guard markers did not settle/);
       accelerateGuardTimeout = false;
       clock = Date.now();
-      await appendSyntheticGuard("unit3", "pending-handoff", "completed");
+      await appendSyntheticGuard("lifecycle", "pending-handoff", "completed");
 
-      const followedUp = await run({ action: "follow_up", name: "unit3", assignment: "follow-up synthetic assignment" });
+      const followedUp = await run({ action: "follow_up", name: "lifecycle", assignment: "follow-up synthetic assignment" });
       expect(followedUp.details.checkpoint).toMatchObject({ present: true, fresh: true });
 
-      const compacted = await run({ action: "compact", name: "unit3" });
+      const compacted = await run({ action: "compact", name: "lifecycle" });
       expect(compacted.details.guard.outcome).toBe("completed");
 
-      const checkpointPath = checkpointPathFor("unit3");
+      const checkpointPath = checkpointPathFor("lifecycle");
       await rm(checkpointPath, { force: true });
-      await expect(run({ action: "close", name: "unit3" })).rejects.toThrow(/regular checkpoint/);
-      expect([...agents.keys()]).toContain("unit3");
-      await writeSyntheticCheckpoint("unit3");
-      await appendSyntheticGuard("unit3", "close-pending", "started");
-      await expect(run({ action: "close", name: "unit3" })).rejects.toThrow(/pending guard/);
-      expect([...agents.keys()]).toContain("unit3");
-      await appendSyntheticGuard("unit3", "close-pending", "completed");
+      await expect(run({ action: "close", name: "lifecycle" })).rejects.toThrow(/regular checkpoint/);
+      expect([...agents.keys()]).toContain("lifecycle");
+      await writeSyntheticCheckpoint("lifecycle");
+      await appendSyntheticGuard("lifecycle", "close-pending", "started");
+      await expect(run({ action: "close", name: "lifecycle" })).rejects.toThrow(/pending guard/);
+      expect([...agents.keys()]).toContain("lifecycle");
+      await appendSyntheticGuard("lifecycle", "close-pending", "completed");
 
-      const closed = await run({ action: "close", name: "unit3" });
+      const closed = await run({ action: "close", name: "lifecycle" });
       expect(closed.details.host?.status).toBe("closed");
-      expect(closed.details.childSession).toEqual({ id: "unit3", legacy: false });
+      expect(closed.details.childSession).toEqual({ id: "lifecycle", legacy: false });
       expect(closedPanes).toContain("pane-2");
-      await expect(access(sessionPathFor("unit3"))).resolves.toBeUndefined();
+      await expect(access(sessionPathFor("lifecycle"))).resolves.toBeUndefined();
 
-      const resumed = await run({ action: "resume", name: "unit3", assignment: "resume synthetic assignment" });
+      const resumed = await run({ action: "resume", name: "lifecycle", assignment: "resume synthetic assignment" });
       expect(resumed.details.host?.status).toBe("idle");
       expect(resumed.details.checkpoint).toMatchObject({ present: true, fresh: true });
-      const closedAgain = await run({ action: "close", name: "unit3" });
+      const closedAgain = await run({ action: "close", name: "lifecycle" });
       expect(closedAgain.details.host?.status).toBe("closed");
 
       const janitor = await run({ action: "start", name: "janitor", profile: "janitor", assignment: "bounded janitor assignment" });

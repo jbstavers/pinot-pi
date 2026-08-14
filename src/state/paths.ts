@@ -10,9 +10,6 @@ export interface StatePaths {
   implementationRoot: string;
   implementationSessions: string;
   implementationCheckpoints: string;
-  ledger: string;
-  ledgerReports: string;
-  ledgerCursor: string;
 }
 
 export interface PiLocations {
@@ -35,7 +32,6 @@ export function resolveStatePaths(env: NodeJS.ProcessEnv = process.env): StatePa
   const root = resolveStateRoot(env);
   const implementationHistory = join(root, "implementation-history");
   const implementationRoot = join(root, "implementer");
-  const ledger = join(root, "subagent-use-ledger");
   return {
     root,
     config: join(root, "config.json"),
@@ -43,9 +39,6 @@ export function resolveStatePaths(env: NodeJS.ProcessEnv = process.env): StatePa
     implementationRoot,
     implementationSessions: join(implementationRoot, "sessions"),
     implementationCheckpoints: join(implementationRoot, "checkpoints"),
-    ledger,
-    ledgerReports: join(ledger, "reports"),
-    ledgerCursor: join(ledger, "cursor.json"),
   };
 }
 

@@ -4,9 +4,9 @@ argument-hint: "<what to debrief>"
 ---
 Debrief this Pi coding work: $@
 
-Do not implement fixes unless explicitly asked. Start with bounded exploration. Use Pinot’s configured implementation-history index first, select the matching record, and follow only its project, commit, session, snapshot, and output pointers. Treat records as maps, then verify consequential claims in current code, Git, sessions, checkpoints, and outputs. Missing history, missing ledger reports, and work performed before history initialization are normal bounded fallbacks—not evidence that no work occurred.
+Do not implement fixes unless explicitly asked. Start with bounded exploration. Use Pinot’s configured implementation-history index first, select the matching record, and follow only its project, commit, session, snapshot, and output pointers. Treat records as maps, then verify consequential claims in current code, Git, sessions, checkpoints, and outputs. Missing history and work performed before history initialization are normal bounded fallbacks—not evidence that no work occurred.
 
-Keep semantic implementation evidence separate from the aggregate subagent-use ledger. A ledger period is not uniquely attributable to one implementation. Unit 5 ledger integration is not available in this package slice; when no configured report exists, say so rather than inventing metrics or claiming complete coverage. Never copy transcripts, checkpoint bodies, credentials, sessions, caches, or generated reports into history.
+Never copy transcripts, checkpoint bodies, credentials, sessions, caches, or generated diagnostic output into history.
 
 ## Evidence map
 

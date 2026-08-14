@@ -12,7 +12,6 @@ const templates: SetupTemplates = {
   config: serializePinotConfig(),
   historyIndex: "# Empty history\n",
   historyRecord: "# Empty record template\n",
-  ledgerReadme: "# Ledger\n",
 };
 
 async function isolatedHome(): Promise<string> {
@@ -64,7 +63,7 @@ describe("state boundary", () => {
     const home = await isolatedHome();
     const paths = resolveStatePaths({ HOME: home });
     const first = await setupState(paths, templates);
-    expect(first.created).toHaveLength(11);
+    expect(first.created).toHaveLength(8);
     const before = await readFile(paths.config, "utf8");
     const second = await setupState(paths, templates);
     expect(second.created).toHaveLength(0);
@@ -72,10 +71,10 @@ describe("state boundary", () => {
     const status = await inspectState(paths);
     expect(status.config).toBe("valid");
     expect(status.entries.every((entry) => entry.kind === "directory" || entry.kind === "file")).toBe(true);
-    for (const path of [paths.root, paths.implementationHistory, paths.implementationRoot, paths.implementationSessions, paths.implementationCheckpoints, paths.ledger, paths.ledgerReports]) {
+    for (const path of [paths.root, paths.implementationHistory, paths.implementationRoot, paths.implementationSessions, paths.implementationCheckpoints]) {
       expect((await stat(path)).mode & 0o7777).toBe(0o700);
     }
-    for (const path of [paths.config, join(paths.implementationHistory, "index.md"), join(paths.implementationHistory, "record-template.md"), join(paths.ledger, "README.md")]) {
+    for (const path of [paths.config, join(paths.implementationHistory, "index.md"), join(paths.implementationHistory, "record-template.md")]) {
       expect((await stat(path)).mode & 0o7777).toBe(0o600);
     }
   });
@@ -90,15 +89,15 @@ describe("state boundary", () => {
     const preflightPaths = resolveStatePaths({ HOME: preflightHome });
     const preflightConflict = join(preflightHome, "conflict-file");
     await writeFile(preflightConflict, "conflict");
-    await expect(setupState({ ...preflightPaths, ledgerReports: preflightConflict }, templates)).rejects.toThrow(/non-directory/);
+    await expect(setupState({ ...preflightPaths, implementationCheckpoints: preflightConflict }, templates)).rejects.toThrow(/non-directory/);
     await expect(lstat(preflightPaths.root)).rejects.toMatchObject({ code: "ENOENT" });
 
     const secondHome = await isolatedHome();
     const secondPaths = resolveStatePaths({ HOME: secondHome });
     await setupState(secondPaths, templates);
     await writeFile(secondPaths.implementationHistory + ".conflict", "x");
-    await symlink(secondPaths.implementationHistory + ".conflict", join(secondPaths.root, "subagent-use-ledger", "reports", "linked"));
-    await expect(setupState({ ...secondPaths, ledgerReports: join(secondPaths.root, "subagent-use-ledger", "reports", "linked") }, templates)).rejects.toThrow(/symlink/);
+    await symlink(secondPaths.implementationHistory + ".conflict", join(secondPaths.root, "implementer", "checkpoints", "linked"));
+    await expect(setupState({ ...secondPaths, implementationCheckpoints: join(secondPaths.root, "implementer", "checkpoints", "linked") }, templates)).rejects.toThrow(/symlink/);
 
     const thirdHome = await isolatedHome();
     const thirdPaths = resolveStatePaths({ HOME: thirdHome });
@@ -120,17 +119,15 @@ describe("state boundary", () => {
 
 describe("prerequisites", () => {
   it("reports availability without installing or selecting defaults", () => {
-    expect(evaluatePrerequisites({ nodeVersion: "v22.19.0", piLoaded: true, pythonAvailable: false, herdrAvailable: true, herdrIntegration: { installed: "installed", current: "current" }, herdrEnvironmentActive: false })).toEqual({
+    expect(evaluatePrerequisites({ nodeVersion: "v22.19.0", piLoaded: true, herdrAvailable: true, herdrIntegration: { installed: "installed", current: "current" }, herdrEnvironmentActive: false })).toEqual({
       node: "available",
       pi: "available",
-      python: "unavailable",
       herdr: "available",
       herdrIntegration: "installed",
       herdrIntegrationCurrent: "current",
       herdrEnvironment: "inactive",
-      optionalWeb: "not required by bootstrap",
     });
-    expect(evaluatePrerequisites({ nodeVersion: "v20.0.0", piLoaded: false, pythonAvailable: false, herdrAvailable: false, herdrIntegration: { installed: "unknown", current: "unknown" }, herdrEnvironmentActive: true }).node).toBe("unsupported");
+    expect(evaluatePrerequisites({ nodeVersion: "v20.0.0", piLoaded: false, herdrAvailable: false, herdrIntegration: { installed: "unknown", current: "unknown" }, herdrEnvironmentActive: true }).node).toBe("unsupported");
   });
 
   it("selects only the exact pi line from realistic multi-line integration status", () => {

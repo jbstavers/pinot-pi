@@ -1,6 +1,6 @@
 # Implementation record: `<project> / <implementation>`
 
-> This append-only record is semantic implementation provenance only. It is not a usage ledger and does not claim per-implementation metrics.
+> This append-only record contains semantic implementation provenance.
 
 - **Date:** `YYYY-MM-DD`
 - **Outcome:**
@@ -21,7 +21,7 @@
 
 - **Review findings / dispositions:**
 - **Verification:**
-- **Deviations / deferred work:**
+- **Deviations:**
 - **Remaining work:**
 
 ## Janitor maintenance
@@ -41,7 +41,7 @@ These are exact historical snapshots, not current governing documents.
   - `plan-<slug>.md` — additional label — source path —
 - **Source handoff path(s):** exact tracked or ignored path(s) —
 
-Only final, explicitly supplied documents may be copied when safe to track. Never concatenate plans. Do not copy transcripts, checkpoint bodies, credentials, authentication state, sessions, caches, generated reports, or uncertain inputs.
+Only final, explicitly supplied documents may be copied when safe to track. Never concatenate plans. Do not copy transcripts, checkpoint bodies, credentials, authentication state, sessions, caches, generated diagnostic output, or uncertain inputs.
 
 ## Debrief lookup
 
@@ -49,9 +49,3 @@ Only final, explicitly supplied documents may be copied when safe to track. Neve
 - **Safe snapshot pointers:**
 - **Review / verification pointers:**
 - **Remaining-work pointers:**
-
-## Aggregate ledger period reference
-
-- **Subagent-use report:** `pending` or exact configured report path
-- **Coverage end:** `pending` or exact scanner-reported timestamp
-- **Attribution boundary:** This is aggregate period evidence only; it is not uniquely attributable to this implementation and must not be expanded with counts, models, costs, tokens, lifecycle totals, or technical indicators.

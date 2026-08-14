@@ -10,7 +10,6 @@ export interface HerdrIntegrationStatus {
 export interface PrerequisiteInput {
   nodeVersion: string;
   piLoaded: boolean;
-  pythonAvailable: boolean;
   herdrAvailable: boolean;
   herdrIntegration: HerdrIntegrationStatus;
   herdrEnvironmentActive: boolean;
@@ -19,24 +18,20 @@ export interface PrerequisiteInput {
 export interface PrerequisiteStatus {
   node: "available" | "unsupported";
   pi: "available" | "unavailable";
-  python: "available" | "unavailable";
   herdr: "available" | "unavailable";
   herdrIntegration: HerdrIntegrationValue;
   herdrIntegrationCurrent: HerdrIntegrationCurrent;
   herdrEnvironment: "active" | "inactive";
-  optionalWeb: "not required by bootstrap";
 }
 
 export function evaluatePrerequisites(input: PrerequisiteInput): PrerequisiteStatus {
   return {
     node: supportsNode(input.nodeVersion) ? "available" : "unsupported",
     pi: input.piLoaded ? "available" : "unavailable",
-    python: input.pythonAvailable ? "available" : "unavailable",
     herdr: input.herdrAvailable ? "available" : "unavailable",
     herdrIntegration: input.herdrIntegration.installed,
     herdrIntegrationCurrent: input.herdrIntegration.current,
     herdrEnvironment: input.herdrEnvironmentActive ? "active" : "inactive",
-    optionalWeb: "not required by bootstrap",
   };
 }
 

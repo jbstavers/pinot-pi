@@ -14,6 +14,7 @@ describe("Pi package manifest", () => {
     expect(packageJson.pi.skills).toEqual(["./skills"]);
     expect(packageJson.pi.prompts).toEqual(["./prompts"]);
     expect(packageJson.pi.themes).toEqual([]);
+    expect(packageJson.files).toContain("PI-START-HERE.md");
     expect(packageJson.peerDependencies).toEqual({
       "@earendil-works/pi-ai": "*",
       "@earendil-works/pi-coding-agent": "*",

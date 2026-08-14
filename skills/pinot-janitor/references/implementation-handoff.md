@@ -9,10 +9,10 @@ The final source writer supplies this compact handoff at the exact plan path bef
 - **Logging behavior and log/config paths (when applicable):**
 - **Review findings / dispositions:**
 - **Validation:**
-- **Deviations / deferred work:**
+- **Deviations:**
+- **Remaining work:**
 - **Durable-documentation impacts:**
 - **Temporary artifacts (retain/delete rationale):**
-- **Remaining active work:**
 - **Exact specification and plan snapshot paths/roles:**
 - **Configured history-root exception:**
 ```

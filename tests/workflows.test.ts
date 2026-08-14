@@ -40,9 +40,7 @@ describe("public Pinot workflow resources", () => {
     expect(all).toContain("pinot_run_test_suite");
     expect(all).toContain("HERDR_ENV=1");
     expect(all).toMatch(/never fall back/i);
-    expect(all).toContain("configured history root");
-    expect(all).toContain("aggregate ledger");
-    expect(all).toContain("Unit 5");
+    expect(all).toContain("implementation-history");
   });
 
   it("preserves required workflow judgments and Herdr refusal semantics", async () => {
@@ -72,8 +70,6 @@ describe("public Pinot workflow resources", () => {
     for (const source of [historyIndex, record]) {
       expect(source).toContain("append-only");
       expect(source).toContain("semantic");
-      expect(source).toContain("aggregate");
-      expect(source).toContain("not uniquely attributable");
       expect(source).toContain("transcripts");
       expect(source).toContain("checkpoint bodies");
     }

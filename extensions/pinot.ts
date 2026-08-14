@@ -70,7 +70,6 @@ export default function pinotExtension(pi: ExtensionAPI): void {
       const prerequisites = evaluatePrerequisites({
         nodeVersion: process.version,
         piLoaded: true,
-        pythonAvailable: await commandAvailable(pi, "python3"),
         herdrAvailable: await commandAvailable(pi, "herdr"),
         herdrIntegration: await herdrIntegrationStatus(pi),
         herdrEnvironmentActive: process.env.HERDR_ENV === "1" && Boolean(process.env.HERDR_SOCKET_PATH),

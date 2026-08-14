@@ -14,7 +14,6 @@ describe("distributed package privacy", () => {
   it("scans every package-dry-run file for private couplings and provider defaults", async () => {
     const files = distributedFiles();
     const text = (await Promise.all(files.map((file) => readFile(join(root, file), "utf8")))).join("\n");
-    const packagePathAllowlist = text.replace(/subagent-use-ledger\/reports/g, "");
     const forbiddenCouplings = [
       /\/Users\//i,
       /\/home\/[^~\s/]+/i,
@@ -25,7 +24,7 @@ describe("distributed package privacy", () => {
       /(?:~[\\/](?:[^\s"'`]+[\\/])*(?:auth|settings|sessions?|checkpoints?|reports?)(?:[\\/]\.?(?:json|jsonl|md)?\b)|[\\/]private[\\/]|[\\/]personal[\\/]|[\\/](?:auth|settings|sessions?|checkpoints?|reports?)\.(?:json|jsonl|md)\b|\+(?:agent-sessions|agent-checkpoints)\b)/i,
       /\b(?:openai|anthropic|google|openrouter|moonshot|xai)\/[^\s"'`]+/i,
     ];
-    for (const pattern of forbiddenCouplings) expect(packagePathAllowlist).not.toMatch(pattern);
+    for (const pattern of forbiddenCouplings) expect(text).not.toMatch(pattern);
     expect(text).not.toMatch(/"(?:scout|assessor|second-opinion|implementer|reviewer|verifier)"\s*:\s*"[^" ]+"/);
     expect(files).toContain("package.json");
   });

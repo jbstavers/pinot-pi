@@ -26,7 +26,7 @@ Save at the project’s established planning location or `docs/+plans/<slug>-pla
 - review, adjudication, provenance, documentation, and closeout obligations when applicable;
 - logging decision, if applicable, distinguishing permanent logs from temporary test output.
 
-Use exact tool/action names from the current Pinot contract when the plan invokes them: `pinot_delegate_background`, `pinot_native_herdr_implementer`, and `pinot_run_test_suite`. Keep implementation state, history, and ledger locations configuration-driven through Pinot; never embed a machine path.
+Use exact tool/action names from the current Pinot contract when the plan invokes them: `pinot_delegate_background`, `pinot_native_herdr_implementer`, and `pinot_run_test_suite`. Keep implementation state and history locations configuration-driven through Pinot; never embed a machine path.
 
 For controlled work, give an evidence-based intensity, exact review counts, approximate file/changed-line tripwires, current hazards, and a compact completion log. These are guardrails, not quotas. Stop and ask the user about unexpected persistence, runtime services, credential redesign, platform expansion, or material scope growth.
 

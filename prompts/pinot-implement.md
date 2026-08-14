@@ -16,10 +16,10 @@ Use `pinot_native_herdr_implementer` with explicit actions `start`, `resume`, `f
 
 Keep exactly one writer in the shared project. Do not edit while the writer is active. Give each writer one bounded assignment and require a complete fresh checkpoint-v4 containing changed files, verification, deviations, open questions, and worktree state, even when blocked. Use focused tests named by the plan. Run one final test command through `pinot_run_test_suite` when the plan calls for it; retain complete output only in its configured ignored log location and report concise status. Diagnose failures before editing or rerunning.
 
-Review only a stable candidate. Honor the plan’s exact reviewer and second-opinion counts. Adjudicate each finding as fix, reject with evidence, or approved deferral. Recheck invalidated focused verification after accepted fixes. Keep semantic implementation provenance separate from aggregate ledger-period evidence.
+Review only a stable candidate. Honor the plan’s exact reviewer and second-opinion counts. Adjudicate each finding as fix, reject with evidence, or accepted remaining work. Recheck invalidated focused verification after accepted fixes. Keep implementation provenance semantic and concise.
 
 ## Janitor handoff
 
 After the final source-writer checkpoint and review corrections, record the final handoff: exact plan/spec paths, changed paths or commit range, review dispositions, verification, deviations, documentation impact, temporary artifacts and retention, and remaining work. Close the source writer before starting a fresh Janitor specialist. Invoke the package-owned `pinot-janitor` skill and give it the exact configured history root, supplied provenance, and a narrow scope. Janitor is the sole writer during closeout and must not infer authority over another repository. It must use no-overwrite records and safe exact snapshots, and it must classify uncertain cleanup as retain/unresolved.
 
-The coordinator owns commits. Do not commit from the durable child. Do not claim ledger metrics are attributable to this implementation: the aggregate ledger is a separate configured period source and is unavailable until that integration is implemented. Keep transcripts, checkpoint bodies, credentials, sessions, caches, generated reports, and uncertain inputs out of history.
+The coordinator owns commits. Do not commit from the durable child. Keep transcripts, checkpoint bodies, credentials, sessions, caches, generated diagnostic output, and uncertain inputs out of history.
