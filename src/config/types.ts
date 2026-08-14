@@ -8,6 +8,8 @@ export interface PinotConfig {
   version: 1;
   models: Record<ModelRole, string>;
   implementerEffort: Record<ImplementerEffort, string>;
+  /** Optional user-selected extension that provides compatible external-source tools. */
+  externalSourceExtension: string;
 }
 
 export const EMPTY_PINOT_CONFIG: PinotConfig = {
@@ -21,6 +23,7 @@ export const EMPTY_PINOT_CONFIG: PinotConfig = {
     verifier: "",
   },
   implementerEffort: { standard: "", maximum: "" },
+  externalSourceExtension: "",
 };
 
 export const MODEL_REFERENCE_PATTERN = /^[a-z0-9][a-z0-9_-]*\/[^\s:]+:(off|minimal|low|medium|high|xhigh|max)$/;
@@ -40,6 +43,9 @@ export function parsePinotConfig(text: string): PinotConfig {
   if (!record.implementerEffort || typeof record.implementerEffort !== "object" || Array.isArray(record.implementerEffort)) {
     throw new Error("Pinot config must have an implementerEffort object.");
   }
+  if (record.externalSourceExtension !== undefined && typeof record.externalSourceExtension !== "string") {
+    throw new Error("externalSourceExtension must be a path or package name, or empty.");
+  }
   const models = record.models as Record<string, unknown>;
   const implementerEffort = record.implementerEffort as Record<string, unknown>;
   const modelValues = {} as Record<ModelRole, string>;
@@ -48,7 +54,8 @@ export function parsePinotConfig(text: string): PinotConfig {
   for (const effort of IMPLEMENTER_EFFORTS) effortValues[effort] = validateModelValue(implementerEffort[effort], `implementerEffort.${effort}`);
   if (Object.keys(models).some((key) => !(MODEL_ROLES as readonly string[]).includes(key))) throw new Error("Pinot config has an unknown model role.");
   if (Object.keys(implementerEffort).some((key) => !(IMPLEMENTER_EFFORTS as readonly string[]).includes(key))) throw new Error("Pinot config has an unknown implementer effort.");
-  return { version: 1, models: modelValues, implementerEffort: effortValues };
+  const externalSourceExtension = typeof record.externalSourceExtension === "string" ? record.externalSourceExtension : "";
+  return { version: 1, models: modelValues, implementerEffort: effortValues, externalSourceExtension };
 }
 
 function validateModelValue(value: unknown, label: string): string {

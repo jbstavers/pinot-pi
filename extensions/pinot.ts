@@ -4,6 +4,7 @@ import { validateConfigStatus } from "../src/config/status.ts";
 import { evaluatePrerequisites, parseHerdrIntegrationStatus } from "../src/state/prerequisites.ts";
 import { resolvePiLocations, resolveStatePaths } from "../src/state/paths.ts";
 import { inspectState, loadPackageTemplates, setupState } from "../src/state/setup.ts";
+import { registerDelegationTool } from "../src/delegation/index.ts";
 
 async function commandAvailable(pi: ExtensionAPI, command: string): Promise<boolean> {
   try {
@@ -49,6 +50,8 @@ export default function pinotExtension(pi: ExtensionAPI): void {
       ctx.ui.notify(`Pinot setup complete. State root: ${paths.root}. ${result.created.length} path(s) created.`, "info");
     },
   });
+
+  if (typeof pi.registerTool === "function") registerDelegationTool(pi);
 
   pi.registerCommand("pinot-status", {
     description: "Show Pinot state and prerequisite status without changing files",

@@ -4,7 +4,7 @@ Package identity: `@jbstavers/pinot-pi`; display name: Pinot.
 
 Pinot is an independent workflow package for the Pi coding agent. It is not affiliated with, sponsored by, or endorsed by Apache Pinot; the shared display name is intentional and this project concerns Pi coding-agent workflows.
 
-This repository is an early bootstrap. Work Units 0–1 establish the safe package boundary and the explicit configuration/state foundation. Workflow prompts, delegation, durable implementation, ledger, and closeout features are later work and are not included yet.
+This repository is an early bootstrap. Work Units 0–2 establish the safe package boundary, explicit configuration/state foundation, and bounded background delegation. Durable implementation, workflows, ledger, and closeout features are later work and are not included yet.
 
 ## Requirements
 
@@ -60,6 +60,14 @@ The production package contains only the explicit Pi extension, source foundatio
 - [`SECURITY.md`](SECURITY.md) — permissions, trust, and data boundaries.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — public contribution process.
 - [`AGENTS.md`](AGENTS.md) — concise agent-facing safety guidance.
+
+## Background delegation
+
+`pinot_delegate_background` runs one ephemeral, read-only worker for a bounded scout, assessor, second opinion, reviewer, or evidence-only verifier assignment. It returns a compact checkpoint-v4 report with separate checkpoint and process outcomes, deadline/cancellation/shutdown, kill-attempt, and closure-observation metadata, bounded usage, and public mechanical details only; assignment text, checkpoint text, temporary paths, and settings hashes stay out of tool details. Workers have only `read`, `grep`, `find`, and `ls`; they cannot edit, run shell commands, or recursively delegate.
+
+Role models come from the configured `models` mappings. The parent resolves only the selected provider through Pi's `getProviderAuth()` API and hands the child a mode-0600 temporary bridge. A package-owned child bootstrap consumes and unlinks it, registers the built-in provider override, and uses an isolated child config/session directory. Pinot never copies or symlinks full auth/settings files, puts credentials in argv or results, or falls back to user configuration. External-source scouting is rejected unless `externalSourceExtension` names an explicitly configured compatible extension; no web or RTK extension is bundled.
+
+The read-only boundary is canonical-root and symlink aware, but it is not an operating-system sandbox. Pi packages run with the user's full permissions and should be installed only after reviewing the source.
 
 ## Maturity and attribution
 
