@@ -4,6 +4,12 @@ import {
   IMPLEMENTER_CHILD_MARKER,
   IMPLEMENTER_LIFECYCLE_OWNER_MARKER,
 } from "../guard.ts";
+import {
+  IMPLEMENTER_PROFILE_ENTRY,
+  IMPLEMENTER_PROFILE_ENV,
+  IMPLEMENTER_PROFILE_VERSION,
+  isImplementerProfile,
+} from "../profile.ts";
 
 const HERDR_ENV = process.env.HERDR_ENV;
 const socketPath = process.env.HERDR_SOCKET_PATH;
@@ -116,6 +122,9 @@ function releaseAgent(): Promise<void> {
 
 export default function herdrAgentState(pi: ExtensionAPI): void {
   if (!enabled()) return;
+  const profile = process.env[IMPLEMENTER_PROFILE_ENV];
+  if (!isImplementerProfile(profile)) return;
+  let profileRecorded = false;
   let rootSession = false;
   let active = false;
   let blockedCount = 0;
@@ -168,6 +177,10 @@ export default function herdrAgentState(pi: ExtensionAPI): void {
   });
 
   pi.on("session_start", async (event: any, ctx: any) => {
+    if (!profileRecorded) {
+      pi.appendEntry(IMPLEMENTER_PROFILE_ENTRY, { version: IMPLEMENTER_PROFILE_VERSION, profile });
+      profileRecorded = true;
+    }
     if (ctx?.hasUI !== true) return;
     rootSession = true;
     updateSessionReference(ctx);

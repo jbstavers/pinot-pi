@@ -4,13 +4,22 @@
 
 Pi loads `extensions/pinot.ts` from the explicit `pi` manifest. The extension registers `/pinot-setup` and `/pinot-status` but does not perform I/O during factory load. Package resources are immutable and may be reset by Pi's Git-package reconciliation, so user data never belongs in the checkout.
 
-The implementation is split into five small layers:
+The implementation is split into six small layers:
 
-1. `src/config/` defines the generic role/model configuration format and command schema.
-2. `src/state/` resolves the state root, validates safe ownership/permissions, inspects state without writing, and performs explicit idempotent setup.
-3. `src/delegation/` defines the typed assignment/checkpoint contract, bounded child process, credential bridge/bootstrap, canonical-root read tools, and compact result.
-4. `src/implementation/` defines the Pi-session-first Herdr lifecycle, context guard, package-relative child support, and exact test-suite runner.
-5. `extensions/` adapts those functions to Pi commands, tools, and prerequisite reporting.
+1. `prompts/` defines generic `/pinot-*` workflow templates for specification, planning, implementation, debugging, debrief, and Janitor closeout.
+2. `skills/pinot-janitor/` defines the package-owned sole-writer closeout/helper contract and its relative references.
+3. `src/config/` defines the generic role/model configuration format and command schema.
+4. `src/state/` resolves the state root, validates safe ownership/permissions, inspects state without writing, and performs explicit idempotent setup.
+5. `src/delegation/` defines the typed assignment/checkpoint contract, bounded child process, credential bridge/bootstrap, canonical-root read tools, and compact result.
+6. `src/implementation/` defines the Pi-session-first Herdr lifecycle, context guard, package-relative child support, and exact test-suite runner; `extensions/` adapts these functions to Pi commands, tools, and prerequisite reporting.
+
+## Workflow resources and ownership
+
+Pi discovers the six prompt templates from the explicitly declared `pi.prompts` directory and the Janitor skill recursively from the explicitly declared `pi.skills` directory. The prompts use configured Pinot state/history roots and current project evidence only. They do not load a personal prompt set, UI history, named provider/model, or another repository’s instructions.
+
+`/pinot-implement` and `/pinot-janitor` require valid Herdr and never substitute root editing or an ephemeral worker. The implementation coordinator keeps one durable writer; after its host is closed, a fresh Janitor specialist is the sole closeout writer. Janitor may touch only assigned project documentation/high-confidence ephemeral files and the exact history-root exception supplied by the coordinator. It uses no-overwrite append-only records and safe exact spec/plan snapshots, while preserving uncertainty.
+
+Implementation history is semantic evidence for Debrief. This unit pulls forward the history-schema scaffold: it points to root/child provenance, review, verification, deviations, remaining work, and snapshot files. Aggregate ledger paths/coverage ends are period references only and do not attribute metrics to one implementation. Unit 5 owns scanner/launcher and no-overwrite integration; this package does not claim them.
 
 ## State ownership
 
@@ -46,7 +55,7 @@ The child read tools enforce a canonical project root and reject symlink escapes
 
 ## Durable Herdr implementation
 
-`pinot_native_herdr_implementer` exposes explicit `start`, `resume`, `follow_up`, `compact`, `wait`, and `close` actions. A Pi JSONL session under the user-owned Pinot state root is the durable child identity; Herdr's named agent and pane are only the current host attachment. The lifecycle refuses duplicate names/writers, requires exact session/name/cwd matching, recovers model and thinking metadata from the child session rather than changing it on resume, and closes only the verified host while preserving the same session identity. Close additionally requires a regular checkpoint, a settled/nonfailed guard, an idle/done host, and bounded verification that the Herdr host disappeared.
+`pinot_native_herdr_implementer` exposes explicit `start`, `resume`, `follow_up`, `compact`, `wait`, and `close` actions. A Pi JSONL session under the user-owned Pinot state root is the durable child identity; Herdr's named agent and pane are only the current host attachment. The lifecycle refuses duplicate names/writers, requires exact session/name/cwd matching, recovers immutable profile, model, and thinking metadata from the child session rather than changing them on resume, and closes only the verified host while preserving the same session identity. `implementation` is the default start-only profile; Janitor starts select `janitor` and explicitly load the package-owned skill, while resume and lifecycle actions reject missing or conflicting profile records. Close additionally requires a regular checkpoint, a settled/nonfailed guard, an idle/done host, and bounded verification that the Herdr host disappeared.
 
 Pane creation has a final preflight boundary. Pinot checks `HERDR_ENV=1`, the active socket and parent pane, Herdr 0.7.5 or newer, a running server, current Pi integration, and the requested project attachment before checking the available exact built-in model, custom-provider restrictions, and selected provider auth. Invalid Herdr/topology therefore never touches provider authentication. Auth crosses the process boundary through one mode-0600 state-root bridge passed by environment; the package-relative child support extension consumes and unlinks it before registering the built-in provider override. The bridge is removed by the parent on every outcome. Pinot never places credentials in arguments, checkpoints, results, or persistent metadata.
 

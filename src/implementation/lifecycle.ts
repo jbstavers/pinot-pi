@@ -8,6 +8,13 @@ import { Type, type Static } from "typebox";
 import { parseModelReference } from "../config/status.ts";
 import { isExactBuiltInModel, validateAuthResult } from "../delegation/index.ts";
 import { parsePinotConfig, type ImplementerEffort, type PinotConfig } from "../config/types.ts";
+import {
+  IMPLEMENTER_PROFILES,
+  IMPLEMENTER_PROFILE_ENV,
+  isImplementerProfile,
+  recoverImplementerProfileFromJsonl,
+  type ImplementerProfile,
+} from "./profile.ts";
 import { inspectState, type StateStatus } from "../state/setup.ts";
 import { resolveStatePaths, type StatePaths } from "../state/paths.ts";
 import { boundedResultText } from "../delegation/limits.ts";
@@ -24,6 +31,7 @@ import {
 export const IMPLEMENTER_ACTIONS = ["start", "resume", "follow_up", "compact", "wait", "close"] as const;
 export type ImplementerAction = (typeof IMPLEMENTER_ACTIONS)[number];
 export const IMPLEMENTER_EFFORTS = ["standard", "maximum"] as const;
+export { IMPLEMENTER_PROFILES, recoverImplementerProfileFromJsonl } from "./profile.ts";
 export const IMPLEMENTER_WAIT_SLICE_MS = 600_000;
 export const IMPLEMENTER_CHECKPOINT_GRACE_MS = 60_000;
 export const IMPLEMENTER_CHECKPOINT_POLL_MS = 250;
@@ -35,6 +43,7 @@ export const ImplementerSchema = Type.Object({
   cwd: Type.Optional(Type.String({ description: "Project directory; retain the same value for every lifecycle action." })),
   assignment: Type.Optional(Type.String({ minLength: 1, maxLength: 4_000, description: "Bounded assignment for start, resume, or follow_up." })),
   modelEffort: Type.Optional(StringEnum(IMPLEMENTER_EFFORTS, { description: "Start-only neutral implementer effort class." })),
+  profile: Type.Optional(StringEnum(IMPLEMENTER_PROFILES, { description: "Start-only durable child profile; implementation is the default." })),
 }, { additionalProperties: false });
 export type ImplementerInput = Static<typeof ImplementerSchema>;
 
@@ -99,6 +108,7 @@ export interface ImplementerDetails {
   action: ImplementerAction;
   name: string;
   childSession: PublicDurableSession | null;
+  profile: ImplementerProfile;
   host: ImplementerHost | null;
   selectedModel: SelectedImplementerModel | null;
   context: ImplementerContextMeasurement;
@@ -154,6 +164,7 @@ const SUPPORT_CONTEXT_GUARD = fileURLToPath(new URL("./support/implementer-conte
 const SUPPORT_HERDR_STATE = fileURLToPath(new URL("./support/herdr-agent-state.ts", import.meta.url));
 const SUPPORT_IMPLEMENTER_AUTH = fileURLToPath(new URL("./support/implementer-auth.ts", import.meta.url));
 const SUPPORT_SYSTEM_PROMPT = fileURLToPath(new URL("./support/implementer-system.txt", import.meta.url));
+const SUPPORT_JANITOR_SKILL = fileURLToPath(new URL("../../skills/pinot-janitor/SKILL.md", import.meta.url));
 const IMPLEMENTER_AUTH_BRIDGE = "PINOT_IMPLEMENTER_AUTH_BRIDGE";
 const IMPLEMENTER_PROVIDER = "PINOT_IMPLEMENTER_PROVIDER";
 const IMPLEMENTER_MODEL = "PINOT_IMPLEMENTER_MODEL";
@@ -317,6 +328,12 @@ async function recoverModel(session: DurableSession, registry: Pick<ModelRegistr
     throw new Error(`Implementer session ${session.id} immutable model ${recovered.spec} is unavailable for resume.`);
   }
   return { ...recovered, effort: undefined };
+}
+
+async function recoverProfile(session: DurableSession): Promise<ImplementerProfile> {
+  const profile = recoverImplementerProfileFromJsonl(await readFile(session.path, "utf8"));
+  if (!profile) throw new Error(`Implementer session ${session.id} has no immutable profile metadata; refusing recovery.`);
+  return profile;
 }
 
 function parseVersion(value: string): { major: number; minor: number; patch: number } | undefined {
@@ -693,6 +710,8 @@ export async function runImplementer(input: ImplementerInput, cwdInput: string, 
   if (!VALID_NAME.test(input.name)) throw new Error("name must be a Herdr-safe lowercase ID.");
   assertSessionIdSafe(input.name);
   if (input.modelEffort !== undefined && input.action !== "start") throw new Error("modelEffort is supported only for start.");
+  if (input.profile !== undefined && input.action !== "start") throw new Error("profile is supported only for start.");
+  if (input.profile !== undefined && !isImplementerProfile(input.profile)) throw new Error("profile must be a supported durable child profile.");
   if (["start", "resume", "follow_up"].includes(input.action) && !input.assignment?.trim()) throw new Error(`${input.action} requires a bounded assignment.`);
   const now = options.now ?? Date.now;
   const pause = options.pause ?? ((milliseconds: number) => new Promise<void>((resolvePause) => setTimeout(resolvePause, milliseconds)));
@@ -760,24 +779,26 @@ export async function runImplementer(input: ImplementerInput, cwdInput: string, 
     }
   };
   const modelForSession = async (child: DurableSession): Promise<SelectedImplementerModel> => recoverModel(child, options.modelRegistry);
-  const detailsFor = async (action: ImplementerAction, child: DurableSession | undefined, host: ImplementerHost | null, selected: SelectedImplementerModel | null, fresh: boolean | null): Promise<ImplementerDetails> => ({
+  const detailsFor = async (action: ImplementerAction, child: DurableSession | undefined, profile: ImplementerProfile, host: ImplementerHost | null, selected: SelectedImplementerModel | null, fresh: boolean | null): Promise<ImplementerDetails> => ({
     action,
     name: input.name,
     childSession: child ? { id: child.id, legacy: child.legacy } : null,
+    profile,
     host,
     selectedModel: selected,
     context: await contextFor(child, selected, options.modelRegistry),
     guard: publicGuardSummary((await readGuard(child?.path)).summary),
     checkpoint: await checkpointDetails(checkpointPath, fresh),
   });
-  const complete = async (action: ImplementerAction, child: DurableSession, host: ImplementerHost | null, selected: SelectedImplementerModel | null, delivery: ImplementerDelivery | undefined, fresh: boolean | null) => {
-    const details = await detailsFor(action, child, host, selected, fresh);
+  const complete = async (action: ImplementerAction, child: DurableSession, profile: ImplementerProfile, host: ImplementerHost | null, selected: SelectedImplementerModel | null, delivery: ImplementerDelivery | undefined, fresh: boolean | null) => {
+    const details = await detailsFor(action, child, profile, host, selected, fresh);
     return { content: resultText(action, input.name, delivery, host, details.checkpoint), details };
   };
 
   if (input.action === "start") {
     const existing = await session();
     if (existing) throw new Error(`Implementer ${input.name} already has a durable session; resume it or choose a new name. Start never deletes sessions.`);
+    const profile: ImplementerProfile = input.profile ?? "implementation";
     const config = options.config ?? await loadPinotConfig(paths);
     const selected = selectedModelForEffort(config, input.modelEffort ?? "standard", options.modelRegistry);
     await preflightHerdr(exec, cwd);
@@ -790,16 +811,17 @@ export async function runImplementer(input: ImplementerInput, cwdInput: string, 
     try {
       const baseline: GuardBaseline = { actionStartedAt: now(), cycleIds: new Set(), pendingCycleIds: new Set() };
       await rm(checkpointPath, { force: true });
-      const started = await launchHost(exec, input.name, cwd, sessionDirectory, selected, undefined, bridgePath, pause, now);
+      const started = await launchHost(exec, input.name, cwd, sessionDirectory, selected, profile, undefined, bridgePath, pause, now);
       paneId = started.paneId;
       const prompt = await runHerdr(exec, ["agent", "prompt", started.host.target, assignmentPrompt(input.assignment!.trim(), checkpointPath, cwd)], IMPLEMENTER_WAIT_SLICE_MS + 30_000);
       if (prompt.code !== 0) throw new Error("Herdr could not submit the implementer assignment.");
       child = await discoverSession(session, input.name, pause, now);
       if (child.cwd && await canonicalDirectory(child.cwd, "Stored implementer cwd") !== cwd) throw new Error("The durable child session cwd does not match the requested project cwd.");
+      await waitForProfile(child, profile, pause, now);
       await waitForActionStart(input.name, paneId, child, checkpointPath, cwd, baseline, getAgent, pause, now);
       const delivery = await waitForDelivery(exec, input.name, paneId, child, checkpointPath, cwd, baseline, true, true, getAgent, pause, now);
       const host = (await resolveHost(child)) ?? started.host;
-      return await complete("start", child, host ?? null, selected, delivery, delivery.stillWorking ? null : delivery.checkpoint.fresh);
+      return await complete("start", child, profile, host ?? null, selected, delivery, delivery.stillWorking ? null : delivery.checkpoint.fresh);
     } catch (error) {
       if (paneId) await closeStoppedPane(exec, paneId, child, getAgent, input.name, cwd, pause, now);
       throw new Error(`Implementer ${paneId ?? input.name} failed: ${errorText(error)}`);
@@ -811,6 +833,7 @@ export async function runImplementer(input: ImplementerInput, cwdInput: string, 
   const child = await session();
   if (!child) throw new Error(`Implementer ${input.name} has no durable session in Pinot state; start it first.`);
   if (child.cwd && await canonicalDirectory(child.cwd, "Stored implementer cwd") !== cwd) throw new Error(`Implementer ${input.name} session cwd does not match this lifecycle cwd.`);
+  const profile = await recoverProfile(child);
   const selected = await modelForSession(child);
 
   if (input.action === "resume") {
@@ -824,13 +847,13 @@ export async function runImplementer(input: ImplementerInput, cwdInput: string, 
     let paneId: string | undefined;
     try {
       await rm(checkpointPath, { force: true });
-      const started = await launchHost(exec, input.name, cwd, sessionDirectory, selected, child, bridgePath, pause, now);
+      const started = await launchHost(exec, input.name, cwd, sessionDirectory, selected, profile, child, bridgePath, pause, now);
       paneId = started.paneId;
       const prompt = await runHerdr(exec, ["agent", "prompt", started.host.target, assignmentPrompt(input.assignment!.trim(), checkpointPath, cwd)], IMPLEMENTER_WAIT_SLICE_MS + 30_000);
       if (prompt.code !== 0) throw new Error("Herdr could not submit the resumed assignment.");
       await waitForActionStart(input.name, paneId, child, checkpointPath, cwd, baseline, getAgent, pause, now);
       const delivery = await waitForDelivery(exec, input.name, paneId, child, checkpointPath, cwd, baseline, true, true, getAgent, pause, now);
-      return await complete("resume", child, (await resolveHost(child)) ?? started.host, selected, delivery, delivery.stillWorking ? null : delivery.checkpoint.fresh);
+      return await complete("resume", child, profile, (await resolveHost(child)) ?? started.host, selected, delivery, delivery.stillWorking ? null : delivery.checkpoint.fresh);
     } catch (error) {
       if (paneId) await closeStoppedPane(exec, paneId, child, getAgent, input.name, cwd, pause, now);
       throw new Error(`Implementer ${input.name} resume failed: ${errorText(error)}`);
@@ -845,7 +868,7 @@ export async function runImplementer(input: ImplementerInput, cwdInput: string, 
     const baseline = await baselineFor(child, now());
     const host = await resolveHost(child);
     const delivery = await waitForDelivery(exec, input.name, host?.paneId, child, checkpointPath, cwd, baseline, false, false, getAgent, pause, now);
-    return await complete("wait", child, (await resolveHost(child)) ?? null, selected, delivery, delivery.stillWorking ? null : delivery.checkpoint.fresh);
+    return await complete("wait", child, profile, (await resolveHost(child)) ?? null, selected, delivery, delivery.stillWorking ? null : delivery.checkpoint.fresh);
   }
 
   const host = await resolveHost(child);
@@ -861,7 +884,7 @@ export async function runImplementer(input: ImplementerInput, cwdInput: string, 
     if (prompt.code !== 0) throw new Error("Herdr could not submit the follow-up assignment.");
     await waitForActionStart(input.name, verified.paneId, child, checkpointPath, cwd, baseline, getAgent, pause, now);
     const delivery = await waitForDelivery(exec, input.name, verified.paneId, child, checkpointPath, cwd, baseline, true, false, getAgent, pause, now);
-    return await complete("follow_up", child, (await resolveHost(child)) ?? verified, selected, delivery, delivery.stillWorking ? null : delivery.checkpoint.fresh);
+    return await complete("follow_up", child, profile, (await resolveHost(child)) ?? verified, selected, delivery, delivery.stillWorking ? null : delivery.checkpoint.fresh);
   }
 
   if (input.action === "compact") {
@@ -874,7 +897,7 @@ export async function runImplementer(input: ImplementerInput, cwdInput: string, 
     const prompt = await runHerdr(exec, ["agent", "prompt", rechecked.target, `/${IMPLEMENTER_COMPACT_COMMAND}`], IMPLEMENTER_WAIT_SLICE_MS + 30_000);
     if (prompt.code !== 0) throw new Error("Herdr could not request implementer compaction.");
     await waitForGuard(child.path, baseline, pause, now, true);
-    return await complete("compact", child, rechecked, selected, undefined, false);
+    return await complete("compact", child, profile, rechecked, selected, undefined, false);
   }
 
   if (verified.status === "working") throw new Error(`Implementer ${input.name} is still working; wait for a settled result before close.`);
@@ -893,7 +916,7 @@ export async function runImplementer(input: ImplementerInput, cwdInput: string, 
   await waitForHostDisappearance(exec, recheckedHost.paneId, pause, now);
   const preserved = await discoverSession(session, input.name, pause, now);
   if (preserved.id !== child.id || preserved.path !== child.path) throw new Error("Closed pane, but the original durable Pi session was not preserved.");
-  return await complete("close", preserved, { ...recheckedHost, status: "closed" }, selected, undefined, null);
+  return await complete("close", preserved, profile, { ...recheckedHost, status: "closed" }, selected, undefined, null);
 }
 
 async function loadPinotConfig(paths: StatePaths): Promise<PinotConfig> {
@@ -909,6 +932,24 @@ async function discoverSession(session: () => Promise<DurableSession | undefined
     await pause(IMPLEMENTER_CHECKPOINT_POLL_MS);
   }
   throw new Error(`Implementer ${name} did not create a durable Pi session within the startup grace period; no second prompt or automatic rehost will be attempted.`);
+}
+
+async function waitForProfile(session: DurableSession, expected: ImplementerProfile, pause: (milliseconds: number) => Promise<void>, now: () => number): Promise<void> {
+  const deadline = now() + IMPLEMENTER_CHECKPOINT_GRACE_MS;
+  let lastError = "profile metadata is missing";
+  while (now() < deadline) {
+    try {
+      const actual = recoverImplementerProfileFromJsonl(await readFile(session.path, "utf8"));
+      if (!actual) throw new Error("profile metadata is missing");
+      if (actual !== expected) throw new Error(`profile metadata is ${actual}, expected ${expected}`);
+      return;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+      if (/conflicts|corrupt|invalid|expected/.test(lastError)) throw new Error(`Implementer ${session.id} profile recovery failed: ${lastError}.`);
+      if (now() < deadline) await pause(IMPLEMENTER_CHECKPOINT_POLL_MS);
+    }
+  }
+  throw new Error(`Implementer ${session.id} did not record immutable profile metadata: ${lastError}.`);
 }
 
 async function waitForGuardIfAvailable(path: string, baseline: GuardBaseline, pause: (milliseconds: number) => Promise<void>, now: () => number): Promise<void> {
@@ -1004,8 +1045,9 @@ async function waitForDelivery(
   }
 }
 
-async function startHost(exec: ExtensionAPI["exec"], name: string, paneId: string, cwd: string, sessionDirectory: string, selected: SelectedImplementerModel, child: DurableSession | undefined): Promise<unknown> {
+async function startHost(exec: ExtensionAPI["exec"], name: string, paneId: string, cwd: string, sessionDirectory: string, selected: SelectedImplementerModel, profile: ImplementerProfile, child: DurableSession | undefined): Promise<unknown> {
   const sessionArgs = child?.legacy ? ["--session", child.path] : ["--session-id", child?.id ?? name];
+  const profileArgs = profile === "janitor" ? ["--skill", SUPPORT_JANITOR_SKILL] : [];
   const args = [
     "agent", "start", name, "--kind", "pi", "--pane", paneId, "--timeout", "120000", "--",
     "--name", name,
@@ -1018,6 +1060,7 @@ async function startHost(exec: ExtensionAPI["exec"], name: string, paneId: strin
     "-e", SUPPORT_IMPLEMENTER_AUTH,
     "-e", SUPPORT_CONTEXT_GUARD,
     "--no-skills",
+    ...profileArgs,
     "--no-prompt-templates",
     "--no-context-files",
     "--append-system-prompt", SUPPORT_SYSTEM_PROMPT,
@@ -1038,14 +1081,14 @@ async function startHost(exec: ExtensionAPI["exec"], name: string, paneId: strin
   }
 }
 
-async function launchHost(exec: ExtensionAPI["exec"], name: string, cwd: string, sessionDirectory: string, selected: SelectedImplementerModel, child: DurableSession | undefined, bridgePath: string, pause: (milliseconds: number) => Promise<void>, now: () => number): Promise<{ paneId: string; host: ImplementerHost }> {
-  const split = await runHerdr(exec, ["pane", "split", "--current", "--direction", "right", "--cwd", cwd, "--env", `${IMPLEMENTER_LIFECYCLE_OWNER_MARKER}=`, "--env", `${IMPLEMENTER_CHILD_MARKER}=1`, "--env", `${IMPLEMENTER_AUTH_BRIDGE}=${bridgePath}`, "--env", `${IMPLEMENTER_PROVIDER}=${selected.provider}`, "--env", `${IMPLEMENTER_MODEL}=${selected.model}`, "--no-focus"], 30_000);
+async function launchHost(exec: ExtensionAPI["exec"], name: string, cwd: string, sessionDirectory: string, selected: SelectedImplementerModel, profile: ImplementerProfile, child: DurableSession | undefined, bridgePath: string, pause: (milliseconds: number) => Promise<void>, now: () => number): Promise<{ paneId: string; host: ImplementerHost }> {
+  const split = await runHerdr(exec, ["pane", "split", "--current", "--direction", "right", "--cwd", cwd, "--env", `${IMPLEMENTER_LIFECYCLE_OWNER_MARKER}=`, "--env", `${IMPLEMENTER_CHILD_MARKER}=1`, "--env", `${IMPLEMENTER_AUTH_BRIDGE}=${bridgePath}`, "--env", `${IMPLEMENTER_PROVIDER}=${selected.provider}`, "--env", `${IMPLEMENTER_MODEL}=${selected.model}`, "--env", `${IMPLEMENTER_PROFILE_ENV}=${profile}`, "--no-focus"], 30_000);
   if (split.code !== 0) throw new Error("Herdr could not create the implementer pane.");
   let paneId: unknown;
   try { paneId = JSON.parse(split.stdout)?.result?.pane?.pane_id; } catch { paneId = undefined; }
   if (typeof paneId !== "string" || !paneId) throw new Error("Herdr pane split returned no pane identity.");
   try {
-    const agent = await startHost(exec, name, paneId, cwd, sessionDirectory, selected, child);
+    const agent = await startHost(exec, name, paneId, cwd, sessionDirectory, selected, profile, child);
     const host = hostFrom(agent, "pane", name);
     if (!host || host.paneId !== paneId || agentName(agent) !== name || !await hostMatchesCwd(agent, cwd)) throw new Error("Herdr returned an implementer host with an unverifiable identity.");
     return { paneId, host };
@@ -1064,7 +1107,8 @@ export function registerImplementerTool(pi: ExtensionAPI): void {
     promptSnippet: "Use the durable Pinot Herdr implementer for one bounded writing assignment; never fall back to main-agent editing when it is unavailable.",
     promptGuidelines: [
       "Use pinot_native_herdr_implementer for one bounded implementation assignment that needs a durable Pi child.",
-      "The Pi session is the durable child identity and the Herdr name/pane is the current host attachment; retain both across lifecycle calls.",
+      "Profile selection is start-only: implementation is the default; select janitor only for a fresh Janitor start, which explicitly loads the package-owned skill.",
+      "The Pi session is the durable child identity and the Herdr name/pane is the current host attachment; retain both across lifecycle calls and verify immutable profile metadata.",
       "Use resume only when the matching host is absent. A still-working result means call wait again and never close the agent.",
       "Use close only for the verified matching host; close preserves the child session. Do not substitute main-agent editing when Herdr prerequisites fail.",
     ],

@@ -3,12 +3,14 @@ import { execFile as execFileCallback } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 import { getModel } from "@earendil-works/pi-ai/compat";
 import { describe, expect, it } from "vitest";
 import { EMPTY_PINOT_CONFIG, serializePinotConfig } from "../src/config/types.ts";
 import {
   agentSessionReference,
   contextMeasurementForUsage,
+  recoverImplementerProfileFromJsonl,
   recoverSelectedModelFromJsonl,
   resolveDurableSession,
   runImplementer,
@@ -87,6 +89,11 @@ describe("durable implementer helpers", () => {
       JSON.stringify({ type: "message", message: { role: "assistant", provider: "openai", model: "o3-mini" } }),
     ].join("\n");
     expect(recoverSelectedModelFromJsonl(jsonl)).toEqual({ spec: "openai/o3-mini:high", provider: "openai", model: "o3-mini", thinking: "high" });
+    expect(recoverImplementerProfileFromJsonl(jsonl)).toBeUndefined();
+    const janitorProfile = JSON.stringify({ type: "custom", customType: "pinot-implementer-profile", data: { version: 1, profile: "janitor" } });
+    expect(recoverImplementerProfileFromJsonl(`${jsonl}\n${janitorProfile}`)).toBe("janitor");
+    expect(() => recoverImplementerProfileFromJsonl(`${janitorProfile}\n${janitorProfile.replace('"janitor"', '"implementation"')}`)).toThrow(/conflicts/);
+    expect(() => recoverImplementerProfileFromJsonl(JSON.stringify({ type: "custom", customType: "pinot-implementer-profile", data: { version: 2, profile: "janitor" } }))).toThrow(/invalid/);
   });
 
   it("refuses ambiguous durable session files instead of guessing", async () => {
@@ -120,6 +127,20 @@ describe("durable implementer helpers", () => {
 });
 
 describe("durable implementer preflight and public handoff", () => {
+  it("refuses clearly without Herdr instead of falling back to root editing", async () => {
+    const home = await mkdtemp(join(tmpdir(), "pinot-implementation-home-"));
+    const cwd = await projectCwd();
+    const paths = resolveStatePaths({ HOME: home });
+    await setupState(paths);
+    await writeFile(paths.config, serializePinotConfig({ ...EMPTY_PINOT_CONFIG, implementerEffort: { standard: "openai/o3-mini:low", maximum: "openai/o3-mini:low" } }), { mode: 0o600 });
+    await withEnvironment({ PINOT_STATE_DIR: paths.root, HERDR_ENV: undefined, HERDR_SOCKET_PATH: undefined, HERDR_PANE_ID: undefined }, async () => {
+      await expect(runImplementer({ action: "start", name: "no-herdr", cwd, assignment: "Write the bounded synthetic assignment." } as any, cwd, {
+        modelRegistry: modelRegistry(),
+        exec: async () => { throw new Error("must not invoke Herdr when the environment is absent"); },
+      })).rejects.toThrow(/active Herdr environment|HERDR_ENV=1|main-agent editing/i);
+    });
+  });
+
   it("rejects unavailable authentication before any pane is created", async () => {
     const home = await mkdtemp(join(tmpdir(), "pinot-implementation-home-"));
     const cwd = await projectCwd();
@@ -163,7 +184,7 @@ describe("durable implementer preflight and public handoff", () => {
     await setupState(paths);
     const sessionDirectory = join(paths.implementationSessions, "resume-topology");
     await mkdir(sessionDirectory, { mode: 0o700 });
-    await writeFile(join(sessionDirectory, "child.jsonl"), `${JSON.stringify({ type: "session", id: "resume-topology", cwd, provider: "openai", modelId: "o3-mini", thinkingLevel: "low" })}\n`, { mode: 0o600 });
+    await writeFile(join(sessionDirectory, "child.jsonl"), `${JSON.stringify({ type: "session", id: "resume-topology", cwd, provider: "openai", modelId: "o3-mini", thinkingLevel: "low" })}\n${JSON.stringify({ type: "custom", customType: "pinot-implementer-profile", data: { version: 1, profile: "implementation" } })}\n`, { mode: 0o600 });
     const calls: string[][] = [];
     let authCalls = 0;
     const fixture = herdrFixture(cwd, "different-parent");
@@ -185,7 +206,7 @@ describe("durable implementer preflight and public handoff", () => {
     await setupState(paths);
     const sessionDirectory = join(paths.implementationSessions, "delivery-check");
     await (await import("node:fs/promises")).mkdir(sessionDirectory, { mode: 0o700 });
-    await writeFile(join(sessionDirectory, "child.jsonl"), `${JSON.stringify({ type: "session", id: "delivery-check", cwd, provider: "openai", modelId: "o3-mini", thinkingLevel: "low" })}\n`, { mode: 0o600 });
+    await writeFile(join(sessionDirectory, "child.jsonl"), `${JSON.stringify({ type: "session", id: "delivery-check", cwd, provider: "openai", modelId: "o3-mini", thinkingLevel: "low" })}\n${JSON.stringify({ type: "custom", customType: "pinot-implementer-profile", data: { version: 1, profile: "implementation" } })}\n`, { mode: 0o600 });
     const checkpointPath = join(paths.implementationCheckpoints, "delivery-check.md");
     await writeFile(checkpointPath, `Changed files\nPath: ${checkpointPath}\napiKey=SYNTHETIC_SECRET\nAuthorization: Bearer SYNTHETIC_AUTH_SECRET\nBearer SYNTHETIC_BEARER_SECRET\ntoken=SYNTHETIC_TOKEN_SECRET\n`, { mode: 0o600 });
     const fixture = herdrFixture(cwd, "parent");
@@ -217,7 +238,7 @@ describe("durable implementer preflight and public handoff", () => {
     await setupState(paths);
     const sessionDirectory = join(paths.implementationSessions, "result-bounds");
     await mkdir(sessionDirectory, { mode: 0o700 });
-    await writeFile(join(sessionDirectory, "child.jsonl"), `${JSON.stringify({ type: "session", id: "result-bounds", cwd, provider: "openai", modelId: "o3-mini", thinkingLevel: "low" })}\n`, { mode: 0o600 });
+    await writeFile(join(sessionDirectory, "child.jsonl"), `${JSON.stringify({ type: "session", id: "result-bounds", cwd, provider: "openai", modelId: "o3-mini", thinkingLevel: "low" })}\n${JSON.stringify({ type: "custom", customType: "pinot-implementer-profile", data: { version: 1, profile: "implementation" } })}\n`, { mode: 0o600 });
     const checkpointPath = join(paths.implementationCheckpoints, "result-bounds.md");
     const fixture = herdrFixture(cwd, "parent");
     const run = (value: string) => writeFile(checkpointPath, value, { mode: 0o600 }).then(() => withEnvironment({ PINOT_STATE_DIR: paths.root, HERDR_ENV: "1", HERDR_SOCKET_PATH: "/synthetic/herdr.sock", HERDR_PANE_ID: "parent" }, () => runImplementer({ action: "wait", name: "result-bounds", cwd } as any, cwd, { modelRegistry: modelRegistry(), exec: fixture })));
@@ -254,6 +275,8 @@ describe("synthetic Herdr implementer lifecycle", () => {
     const stillWorkingOnce = new Set<string>();
     const suppressCheckpoint = new Set<string>();
     const waitCounts = new Map<string, number>();
+    const profileByPane = new Map<string, "implementation" | "janitor">();
+    const agentStartArguments = new Map<string, string[]>();
     const agentStartFailures = new Set(["agent-start-failure", "agent-start-cleanup-failure"]);
     const invalidAgentStarts = new Set(["agent-start-invalid"]);
     let paneNumber = 0;
@@ -285,11 +308,11 @@ describe("synthetic Herdr implementer lifecycle", () => {
         },
       })}\n`);
     };
-    const ensureSyntheticSession = async (name: string, directory: string, id = name) => {
+    const ensureSyntheticSession = async (name: string, directory: string, profile: "implementation" | "janitor" = "implementation", id = name) => {
       await mkdir(directory, { recursive: true, mode: 0o700 });
       const path = join(directory, `${name}.jsonl`);
       try {
-        await writeFile(path, `${JSON.stringify({ type: "session", id, cwd, provider: "openai", modelId: "o3-mini", thinkingLevel: "low" })}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
+        await writeFile(path, `${JSON.stringify({ type: "session", id, cwd, provider: "openai", modelId: "o3-mini", thinkingLevel: "low" })}\n${JSON.stringify({ type: "custom", customType: "pinot-implementer-profile", data: { version: 1, profile } })}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
       }
@@ -309,10 +332,13 @@ describe("synthetic Herdr implementer lifecycle", () => {
       if (args[0] === "pane" && args[1] === "split") {
         const paneId = `pane-${++paneNumber}`;
         panes.add(paneId);
+        const profile = args.find((arg) => arg.startsWith("PINOT_IMPLEMENTER_PROFILE="))?.split("=", 2)[1];
+        profileByPane.set(paneId, profile === "janitor" ? "janitor" : "implementation");
         return { code: 0, stdout: JSON.stringify({ result: { pane: { pane_id: paneId } } }), stderr: "" };
       }
       if (args[0] === "agent" && args[1] === "start") {
         const name = args[2];
+        agentStartArguments.set(name, [...args]);
         const paneId = args[args.indexOf("--pane") + 1];
         if (name === "agent-start-cleanup-failure") cleanupFailurePanes.add(paneId);
         if (agentStartFailures.has(name)) return { code: 1, stdout: "", stderr: "synthetic agent start failure" };
@@ -320,7 +346,7 @@ describe("synthetic Herdr implementer lifecycle", () => {
           return { code: 0, stdout: JSON.stringify({ result: { agent: { name: "wrong-name", pane_id: paneId, cwd, agent_status: "idle" } } }), stderr: "" };
         }
         const sessionDirectory = args[args.indexOf("--session-dir") + 1];
-        const path = await ensureSyntheticSession(name, sessionDirectory);
+        const path = await ensureSyntheticSession(name, sessionDirectory, profileByPane.get(paneId) ?? "implementation");
         agents.set(name, { name, pane_id: paneId, cwd, foreground_cwd: cwd, agent_status: "idle", agent_session_path: path });
         if (name === "unit3" && !unit3Started) {
           unit3Started = true;
@@ -412,6 +438,8 @@ describe("synthetic Herdr implementer lifecycle", () => {
       expect(started.content).toContain("still working");
       expect(started.content).not.toContain("Checkpoint-v4:");
       expect(started.details.host?.status).toBe("working");
+      expect(started.details.profile).toBe("implementation");
+      expect(agentStartArguments.get("unit3")).not.toContain("--skill");
       await expect(run({ action: "close", name: "unit3" })).rejects.toThrow(/still working/);
 
       const waited = await run({ action: "wait", name: "unit3" });
@@ -451,6 +479,41 @@ describe("synthetic Herdr implementer lifecycle", () => {
       expect(resumed.details.checkpoint).toMatchObject({ present: true, fresh: true });
       const closedAgain = await run({ action: "close", name: "unit3" });
       expect(closedAgain.details.host?.status).toBe("closed");
+
+      const janitor = await run({ action: "start", name: "janitor", profile: "janitor", assignment: "bounded janitor assignment" });
+      expect(janitor.details.profile).toBe("janitor");
+      const initialJanitorArgs = [...(agentStartArguments.get("janitor") ?? [])];
+      const janitorWaitsBeforeInvalidProfile = waitCounts.get("janitor") ?? 0;
+      const janitorStartsBeforeInvalidProfile = agentStartArguments.size;
+      await expect(run({ action: "wait", name: "janitor", profile: "janitor" })).rejects.toThrow(/profile is supported only for start/);
+      expect(waitCounts.get("janitor") ?? 0).toBe(janitorWaitsBeforeInvalidProfile);
+      expect(agentStartArguments.size).toBe(janitorStartsBeforeInvalidProfile);
+
+      const janitorClosed = await run({ action: "close", name: "janitor" });
+      const janitorResumed = await run({ action: "resume", name: "janitor", assignment: "resume bounded janitor assignment" });
+      const janitorWaited = await run({ action: "wait", name: "janitor" });
+      const janitorClosedAgain = await run({ action: "close", name: "janitor" });
+      const janitorSkillPath = fileURLToPath(new URL("../skills/pinot-janitor/SKILL.md", import.meta.url));
+      const resumedJanitorArgs = agentStartArguments.get("janitor") ?? [];
+      for (const args of [initialJanitorArgs, resumedJanitorArgs]) {
+        expect(args.filter((arg) => arg === "--no-skills")).toHaveLength(1);
+        expect(args.filter((arg) => arg === "--skill")).toHaveLength(1);
+        expect(args[args.indexOf("--skill") + 1]).toBe(janitorSkillPath);
+      }
+      const janitorResults = [janitor, janitorClosed, janitorResumed, janitorWaited, janitorClosedAgain];
+      for (const result of janitorResults) expect(result.details.profile).toBe("janitor");
+      const publicJanitorDetails = janitorResults.map((result) => JSON.stringify(result.details));
+      for (const details of publicJanitorDetails) {
+        expect(details).not.toContain("SKILL.md");
+        expect(details).not.toContain("skills/pinot-janitor");
+        expect(details).not.toContain("You are a specialist editing child");
+      }
+
+      const missingProfileDirectory = join(paths.implementationSessions, "missing-profile");
+      await mkdir(missingProfileDirectory, { mode: 0o700 });
+      await writeFile(join(missingProfileDirectory, "missing-profile.jsonl"), `${JSON.stringify({ type: "session", id: "missing-profile", cwd, provider: "openai", modelId: "o3-mini", thinkingLevel: "low" })}\n`, { mode: 0o600 });
+      await expect(run({ action: "wait", name: "missing-profile" })).rejects.toThrow(/no immutable profile metadata/);
+      expect(waitCounts.has("missing-profile")).toBe(false);
 
       const staleDirectory = join(paths.implementationSessions, "stale");
       await ensureSyntheticSession("stale", staleDirectory);

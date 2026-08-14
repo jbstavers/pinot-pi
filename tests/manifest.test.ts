@@ -11,8 +11,8 @@ describe("Pi package manifest", () => {
     expect(packageJson.displayName).toBe("Pinot");
     expect(packageJson.keywords).toContain("pi-package");
     expect(packageJson.pi.extensions).toEqual(["./extensions/pinot.ts"]);
-    expect(packageJson.pi.skills).toEqual([]);
-    expect(packageJson.pi.prompts).toEqual([]);
+    expect(packageJson.pi.skills).toEqual(["./skills"]);
+    expect(packageJson.pi.prompts).toEqual(["./prompts"]);
     expect(packageJson.pi.themes).toEqual([]);
     expect(packageJson.peerDependencies).toEqual({
       "@earendil-works/pi-ai": "*",

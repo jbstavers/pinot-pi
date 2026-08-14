@@ -30,8 +30,12 @@
     "extensions": [
       "./extensions/pinot.ts"
     ],
-    "skills": [],
-    "prompts": [],
+    "skills": [
+      "./skills"
+    ],
+    "prompts": [
+      "./prompts"
+    ],
     "themes": []
   },
   "files": [
@@ -42,6 +46,8 @@
     "CONTRIBUTING.md",
     "docs/",
     "extensions/",
+    "prompts/",
+    "skills/",
     "src/",
     "templates/",
     "package.json"

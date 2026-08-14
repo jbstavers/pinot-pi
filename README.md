@@ -4,7 +4,7 @@ Package identity: `@jbstavers/pinot-pi`; display name: Pinot.
 
 Pinot is an independent workflow package for the Pi coding agent. It is not affiliated with, sponsored by, or endorsed by Apache Pinot; the shared display name is intentional and this project concerns Pi coding-agent workflows.
 
-This repository is an early bootstrap. Work Units 0–3 establish the safe package boundary, explicit configuration/state foundation, bounded background delegation, and the durable Herdr-backed implementer/final-test tools. Generic workflow prompts, ledger integration, and closeout remain later work.
+Pinot provides six generic Pi workflow prompts—`/pinot-spec`, `/pinot-plan`, `/pinot-implement`, `/pinot-debug`, `/pinot-debrief`, and `/pinot-janitor`—alongside the safe package boundary, explicit configuration/state foundation, bounded background delegation, and durable Herdr-backed implementer/final-test tools. The package-owned `pinot-janitor` skill supplies the closeout contract. Ledger scanning and launcher integration remain Unit 5 work and are not included here.
 
 ## Requirements
 
@@ -41,10 +41,18 @@ The setup-created paths are:
 - `config.json` — user-owned role/model mappings in `provider/model:thinking` form plus neutral `implementerEffort.standard` and `implementerEffort.maximum` mappings; no provider or model is bundled.
 - `implementer/sessions/<name>/` — durable Pi JSONL sessions for named Herdr implementers.
 - `implementer/checkpoints/<name>.md` — user-owned fresh checkpoint handoffs.
-- `implementation-history/` — reserved for later semantic implementation records.
-- `subagent-use-ledger/` — reserved for later aggregate ledger cursor and reports.
+- `implementation-history/` — append-only semantic implementation records, safe exact snapshots, provenance, review/verification, deviations, remaining work, Janitor maintenance, and Debrief lookup.
+- `subagent-use-ledger/` — reserved for the Unit 5 aggregate ledger cursor and reports; Unit 4 records only honest period references.
 
 The Pi agent directory and current session location are reported from Pi's supported `getAgentDir()`, session-manager API, and documented `PI_CODING_AGENT_*` defaults. Pinot does not read auth, settings, or session content during setup/status. Status validates each role/effort mapping against Pi's model registry without resolving credentials; blank setup mappings are reported individually.
+
+## Workflows
+
+The prompts are package resources, not personal UI or history settings. They use only the current project, Pinot tools, configured state root, and user-supplied history root. `/pinot-spec` converges a living product decision; `/pinot-plan` produces an evidence-grounded standalone plan; `/pinot-implement` coordinates one durable Herdr writer, review, verification, provenance, and Janitor closeout; `/pinot-debug` diagnoses independently but routes production fixes through that durable writer; `/pinot-debrief` follows implementation history before bounded fallback evidence; and `/pinot-janitor` starts the durable `janitor` profile with explicit package-skill loading for closeout, docs, or sweep mode.
+
+Implementation and Janitor writing refuse without valid Herdr and never fall back to root editing. The implementer defaults to the start-only `implementation` profile; Janitor uses the start-only `janitor` profile and preserves immutable profile metadata across resume/lifecycle actions. Janitor is a sole-writer closeout specialist with no authority over another repository. History records are append-only and retain semantic provenance plus safe exact spec/plan snapshots; aggregate ledger references are period evidence only and do not attribute usage to one implementation. The ledger scanner and launcher are intentionally deferred to Unit 5.
+
+See [`docs/workflows.md`](docs/workflows.md) for the user-facing workflow contract.
 
 ## Development
 
@@ -55,7 +63,7 @@ npm run typecheck
 npm run package:dry-run
 ```
 
-The production package contains only the explicit Pi extension, source foundation, package-relative implementer support resources, templates, and public documentation. Local test output, checkpoints, sessions, dependencies, and generated state are ignored.
+The production package contains the explicit Pi extension, six prompt templates, the package-owned Janitor skill and references, source foundation, implementer support resources, templates, and public documentation. Local test output, checkpoints, sessions, dependencies, and generated state are ignored.
 
 ## Project documents
 
