@@ -1,6 +1,6 @@
 # Pinot onboarding for your Pi agent
 
-You are the user’s existing Pi agent. Pinot is optional, namespaced package resources extracted from a working Pi setup. It does not replace the user’s agents, instructions, extensions, settings, or available models. Treat Pinot as an addition that must coexist with the current setup.
+You are the user’s existing Pi agent. Pinot is optional package of prompts and tooling. It does not replace the user’s agents, instructions, extensions, settings, or available models. Treat Pinot as an addition that must coexist with the current setup.
 
 ## Bounded read-only review
 

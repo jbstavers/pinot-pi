@@ -13,7 +13,13 @@ function distributedFiles(): string[] {
 describe("distributed package privacy", () => {
   it("scans every package-dry-run file for private couplings and provider defaults", async () => {
     const files = distributedFiles();
-    const text = (await Promise.all(files.map((file) => readFile(join(root, file), "utf8")))).join("\n");
+    const contents = await Promise.all(files.map((file) => readFile(join(root, file), "utf8")));
+    const licenseIndex = files.indexOf("LICENSE");
+    expect(licenseIndex).toBeGreaterThanOrEqual(0);
+    expect(contents[licenseIndex]).toContain("Copyright (c) 2026 Jason Stavers");
+    const text = contents.map((content, index) =>
+      index === licenseIndex ? content.replace("Copyright (c) 2026 Jason Stavers", "") : content
+    ).join("\n");
     const forbiddenCouplings = [
       /\/Users\//i,
       /\/home\/[^~\s/]+/i,
