@@ -53,6 +53,9 @@ export async function setupState(paths: StatePaths, templates: SetupTemplates = 
   const created: string[] = [];
   await ensureRoot(paths.root, created);
   await ensureDirectory(paths.implementationHistory, "implementation-history", created);
+  await ensureDirectory(paths.implementationRoot, "implementer", created);
+  await ensureDirectory(paths.implementationSessions, "implementer/sessions", created);
+  await ensureDirectory(paths.implementationCheckpoints, "implementer/checkpoints", created);
   await ensureDirectory(paths.ledger, "subagent-use-ledger", created);
   await ensureDirectory(paths.ledgerReports, "subagent-use-ledger/reports", created);
   await ensureFile(paths.config, templates.config, "config.json", created, true);
@@ -67,6 +70,9 @@ export async function inspectState(paths: StatePaths): Promise<StateStatus> {
     [paths.root, "root"],
     [paths.config, "config"],
     [paths.implementationHistory, "implementation-history"],
+    [paths.implementationRoot, "implementer"],
+    [paths.implementationSessions, "implementer/sessions"],
+    [paths.implementationCheckpoints, "implementer/checkpoints"],
     [paths.ledger, "subagent-use-ledger"],
     [paths.ledgerReports, "subagent-use-ledger/reports"],
   ] as const;
@@ -106,6 +112,9 @@ async function ensureRoot(path: string, created: string[]): Promise<void> {
 async function preflightState(paths: StatePaths): Promise<void> {
   await preflightDirectory(paths.root, "state root");
   await preflightDirectory(paths.implementationHistory, "implementation-history");
+  await preflightDirectory(paths.implementationRoot, "implementer");
+  await preflightDirectory(paths.implementationSessions, "implementer/sessions");
+  await preflightDirectory(paths.implementationCheckpoints, "implementer/checkpoints");
   await preflightDirectory(paths.ledger, "subagent-use-ledger");
   await preflightDirectory(paths.ledgerReports, "subagent-use-ledger/reports");
   await preflightFile(paths.config, "config.json");

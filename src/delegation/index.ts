@@ -98,7 +98,7 @@ function workerPrompt(assignment: DelegationAssignment, timeoutSeconds: number):
   return `You are an ephemeral, read-only Pi background worker. Do not edit, write files, run shell commands, delegate, ask questions, or broaden scope. Your only durable output is the final checkpoint to the parent.\n\nHard process deadline: ${timeoutSeconds} seconds. Stop evidence gathering with ${reserve} seconds remaining and return the best checkpoint available.\n\nRole: ${assignment.role}\n${guidance[assignment.role]}\n\nObjective: ${assignment.objective}\nNon-objectives:\n${assignment.nonObjectives.map((item) => `- ${item}`).join("\n")}\nBoundary paths/subsystems:\n${assignment.boundary.pathsOrSubsystems.map((item) => `- ${item}`).join("\n")}\nEvidence scope: ${assignment.boundary.evidenceScope}\n${assignment.boundary.externalSources?.length ? `Allowed external sources:\n${assignment.boundary.externalSources.map((item) => `- ${item}`).join("\n")}\n` : ""}Verification required: ${assignment.verificationRequired}\nStop/escalate when:\n${assignment.stopConditions.map((item) => `- ${item}`).join("\n")}\n\nEnd with one checkpoint-v4 JSON object, bare or in one json fence, with exactly this shape:\n{"status":"completed|incomplete|blocked","findings":["concise finding"],"evidence":["path, URL, or line location"],"verification":"what was checked or why unavailable","confidence":"high|medium|low","unknowns":["remaining uncertainty"],"escalationQuestion":"optional concise question"}`;
 }
 
-function validateAuthResult(provider: string, value: unknown): { apiKey: string; headers?: Record<string, string>; baseUrl?: string; env?: Record<string, string> } {
+export function validateAuthResult(provider: string, value: unknown): { apiKey: string; headers?: Record<string, string>; baseUrl?: string; env?: Record<string, string> } {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`Authentication unavailable for provider "${provider}".`);
   const result = value as Record<string, unknown>;
   if (Object.keys(result).some((key) => !["auth", "env", "source"].includes(key))) throw new Error("Selected provider returned unsupported authentication metadata.");
@@ -146,7 +146,7 @@ function canonicalValue(value: unknown): unknown {
   return value;
 }
 
-function isExactBuiltInModel(provider: string, modelId: string, model: unknown): boolean {
+export function isExactBuiltInModel(provider: string, modelId: string, model: unknown): boolean {
   let builtIn: unknown;
   try { builtIn = getBuiltinModel(provider as never, modelId as never); } catch { return false; }
   return Boolean(builtIn) && JSON.stringify(canonicalValue(model)) === JSON.stringify(canonicalValue(builtIn));

@@ -43,8 +43,18 @@ function parseBridge(value: unknown): CredentialBridge {
   };
 }
 
+export interface CredentialBridgeExpectations {
+  root?: string;
+  provider?: string;
+  model?: string;
+}
+
 /** Read once, unlink immediately, then install the selected provider override. */
-export async function consumeCredentialBridge(path: string, pi: Pick<ExtensionAPI, "registerProvider">): Promise<CredentialBridge> {
+export async function consumeCredentialBridge(
+  path: string,
+  pi: Pick<ExtensionAPI, "registerProvider">,
+  expectations: CredentialBridgeExpectations = {},
+): Promise<CredentialBridge> {
   let bridge: CredentialBridge;
   try {
     bridge = parseBridge(JSON.parse(await readFile(path, "utf8")));
@@ -53,6 +63,9 @@ export async function consumeCredentialBridge(path: string, pi: Pick<ExtensionAP
   } finally {
     try { await unlink(path); } catch { /* Parent cleanup remains authoritative. */ }
   }
+  if (expectations.root !== undefined && bridge.root !== expectations.root) throw new Error("credential bridge root mismatch");
+  if (expectations.provider !== undefined && bridge.provider !== expectations.provider) throw new Error("credential bridge provider mismatch");
+  if (expectations.model !== undefined && bridge.model !== expectations.model) throw new Error("credential bridge model mismatch");
   for (const [key, value] of Object.entries(bridge.env ?? {})) process.env[key] = value;
   pi.registerProvider(bridge.provider, {
     apiKey: bridge.auth.apiKey,

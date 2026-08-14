@@ -64,7 +64,7 @@ describe("state boundary", () => {
     const home = await isolatedHome();
     const paths = resolveStatePaths({ HOME: home });
     const first = await setupState(paths, templates);
-    expect(first.created).toHaveLength(8);
+    expect(first.created).toHaveLength(11);
     const before = await readFile(paths.config, "utf8");
     const second = await setupState(paths, templates);
     expect(second.created).toHaveLength(0);
@@ -72,7 +72,7 @@ describe("state boundary", () => {
     const status = await inspectState(paths);
     expect(status.config).toBe("valid");
     expect(status.entries.every((entry) => entry.kind === "directory" || entry.kind === "file")).toBe(true);
-    for (const path of [paths.root, paths.implementationHistory, paths.ledger, paths.ledgerReports]) {
+    for (const path of [paths.root, paths.implementationHistory, paths.implementationRoot, paths.implementationSessions, paths.implementationCheckpoints, paths.ledger, paths.ledgerReports]) {
       expect((await stat(path)).mode & 0o7777).toBe(0o700);
     }
     for (const path of [paths.config, join(paths.implementationHistory, "index.md"), join(paths.implementationHistory, "record-template.md"), join(paths.ledger, "README.md")]) {

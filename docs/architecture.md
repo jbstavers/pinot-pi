@@ -4,12 +4,13 @@
 
 Pi loads `extensions/pinot.ts` from the explicit `pi` manifest. The extension registers `/pinot-setup` and `/pinot-status` but does not perform I/O during factory load. Package resources are immutable and may be reset by Pi's Git-package reconciliation, so user data never belongs in the checkout.
 
-The implementation is split into four small layers:
+The implementation is split into five small layers:
 
 1. `src/config/` defines the generic role/model configuration format and command schema.
 2. `src/state/` resolves the state root, validates safe ownership/permissions, inspects state without writing, and performs explicit idempotent setup.
 3. `src/delegation/` defines the typed assignment/checkpoint contract, bounded child process, credential bridge/bootstrap, canonical-root read tools, and compact result.
-4. `extensions/` adapts those functions to Pi commands, delegation, and prerequisite reporting.
+4. `src/implementation/` defines the Pi-session-first Herdr lifecycle, context guard, package-relative child support, and exact test-suite runner.
+5. `extensions/` adapts those functions to Pi commands, tools, and prerequisite reporting.
 
 ## State ownership
 
@@ -18,6 +19,9 @@ The default root is `~/.pinot-pi`. The only documented Pinot override is the abs
 ```text
 ~/.pinot-pi/
 ├── config.json
+├── implementer/
+│   ├── sessions/<name>/
+│   └── checkpoints/<name>.md
 ├── implementation-history/
 └── subagent-use-ledger/
 ```
@@ -30,7 +34,7 @@ The extension uses Pi's supported `getAgentDir()` helper and `ctx.sessionManager
 
 Status checks Node, Python, and the Herdr executable without installing anything. It invokes the read-only `herdr integration status` command and reports installed/current Pi integration separately from whether the current parent has `HERDR_ENV` active. Configuration status parses each provider/model:thinking mapping, reports every empty role/effort mapping, and checks configured provider/models against Pi's model registry without reading auth. Optional web capability is reported as not required by this bootstrap; later delegation must make any external-source extension explicit.
 
-Permanent application logging is intentionally unwarranted in this non-service bootstrap. Commands return bounded diagnostics through Pi; focused test diagnostics, when retained, live under ignored `+test-output/` and have no release or retention claim.
+Permanent application logging is intentionally unwarranted in this non-service bootstrap: there is no application log file, logger configuration, or debug mode. Commands return bounded diagnostics through Pi. The test tool's complete combined logs live under the default ignored project `+test-output/` directory, or an explicitly supplied safe Pinot state-root directory via `logRoot`; Pinot performs no automatic rotation or retention cleanup, so the user removes these diagnostic logs when no longer needed.
 
 ## Bounded background delegation
 
@@ -40,6 +44,18 @@ Child output is capped at 50 KB/2,000 lines. The parser accepts the last valid c
 
 The child read tools enforce a canonical project root and reject symlink escapes. This is not an OS sandbox. External-source scouting requires the configured `externalSourceExtension`; no web or RTK extension is bundled. Temporary bridge/config/session cleanup is attempted on every parent-side outcome.
 
+## Durable Herdr implementation
+
+`pinot_native_herdr_implementer` exposes explicit `start`, `resume`, `follow_up`, `compact`, `wait`, and `close` actions. A Pi JSONL session under the user-owned Pinot state root is the durable child identity; Herdr's named agent and pane are only the current host attachment. The lifecycle refuses duplicate names/writers, requires exact session/name/cwd matching, recovers model and thinking metadata from the child session rather than changing it on resume, and closes only the verified host while preserving the same session identity. Close additionally requires a regular checkpoint, a settled/nonfailed guard, an idle/done host, and bounded verification that the Herdr host disappeared.
+
+Pane creation has a final preflight boundary. Pinot checks `HERDR_ENV=1`, the active socket and parent pane, Herdr 0.7.5 or newer, a running server, current Pi integration, and the requested project attachment before checking the available exact built-in model, custom-provider restrictions, and selected provider auth. Invalid Herdr/topology therefore never touches provider authentication. Auth crosses the process boundary through one mode-0600 state-root bridge passed by environment; the package-relative child support extension consumes and unlinks it before registering the built-in provider override. The bridge is removed by the parent on every outcome. Pinot never places credentials in arguments, checkpoints, results, or persistent metadata.
+
+The child guard records automatic and explicit compaction cycles as session custom entries. The parent waits for pending cycles to settle, requires a new settled cycle for explicit compaction, measures context from successful assistant usage, and requires a regular fresh checkpoint after writing actions. Public details contain only child ID, sanitized host/status/model/context/guard data, and checkpoint presence/size/freshness. Completed `start`, `resume`, `follow_up`, and `wait` results carry bounded, redacted checkpoint-v4 text in semantic content, not details. A still-working result is a bounded handoff: call `wait` again and do not close it.
+
+## Exact test execution
+
+`pinot_run_test_suite` canonicalizes the project cwd and confines logs to an owner-only `+test-output/` directory that Git proves ignored before creation/writing, or to an explicitly supplied external Pinot state-root directory. It tokenizes one executable plus literal arguments and rejects shell operators, so project-controlled shell interpolation is not part of the tool contract. It uses a detached process group, bounded timeout, cancellation/termination, and complete combined output—including spawn errors—in a mode-0600 log. Tool content/details return only mechanical status and a non-absolute logical log location; raw output is never returned.
+
 ## Future seams
 
-The typed state/config API is intentionally shared by later delegation, durable implementation, tracker, ledger launcher, and documentation. No workflow or setup fallback may write project files, copy auth, or silently substitute root editing for a missing durable prerequisite.
+The typed state/config API is intentionally shared by delegation, durable implementation, tracker, ledger launcher, and documentation. No workflow or setup fallback may write project files, copy auth, or silently substitute root editing for a missing durable prerequisite.

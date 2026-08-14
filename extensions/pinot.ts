@@ -5,6 +5,8 @@ import { evaluatePrerequisites, parseHerdrIntegrationStatus } from "../src/state
 import { resolvePiLocations, resolveStatePaths } from "../src/state/paths.ts";
 import { inspectState, loadPackageTemplates, setupState } from "../src/state/setup.ts";
 import { registerDelegationTool } from "../src/delegation/index.ts";
+import { registerImplementerTool } from "../src/implementation/lifecycle.ts";
+import { registerTestSuiteTool } from "../src/implementation/test-suite.ts";
 
 async function commandAvailable(pi: ExtensionAPI, command: string): Promise<boolean> {
   try {
@@ -51,7 +53,11 @@ export default function pinotExtension(pi: ExtensionAPI): void {
     },
   });
 
-  if (typeof pi.registerTool === "function") registerDelegationTool(pi);
+  if (typeof pi.registerTool === "function") {
+    registerDelegationTool(pi);
+    registerImplementerTool(pi);
+    registerTestSuiteTool(pi);
+  }
 
   pi.registerCommand("pinot-status", {
     description: "Show Pinot state and prerequisite status without changing files",

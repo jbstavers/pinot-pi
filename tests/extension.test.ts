@@ -33,6 +33,17 @@ describe("Pi command boundary", () => {
     }
   });
 
+  it("registers the public bounded tool names without the private lifecycle alias", () => {
+    const tools: string[] = [];
+    const fakePi = {
+      registerCommand() {},
+      registerTool(tool: { name: string }) { tools.push(tool.name); },
+    } as any;
+    pinotExtension(fakePi);
+    expect(tools).toEqual(["pinot_delegate_background", "pinot_native_herdr_implementer", "pinot_run_test_suite"]);
+    expect(tools).not.toContain("pinot_herdr_implementer");
+  });
+
   it("reports integration status independently of the active Herdr environment", async () => {
     const stateRoot = await mkdtemp(join(tmpdir(), "pinot-status-parent-")) + "/state";
     const commands = new Map<string, { handler: (args: string, ctx: any) => Promise<void> }>();

@@ -1,0 +1,3 @@
+Preserve the current bounded implementation assignment during Pi context compaction.
+
+Retain the goal, explicit constraints, completed work, unfinished work, decisions, verification status, blockers, and the required project-local checkpoint path. Keep the summary concrete enough for the child to continue the same assignment after compaction. Do not invent a new task, broaden the assignment, or replace the required checkpoint with observational memory. Preserve the normal checkpoint handoff and any exact commands or paths needed for focused verification.

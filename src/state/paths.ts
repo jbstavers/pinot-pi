@@ -7,6 +7,9 @@ export interface StatePaths {
   root: string;
   config: string;
   implementationHistory: string;
+  implementationRoot: string;
+  implementationSessions: string;
+  implementationCheckpoints: string;
   ledger: string;
   ledgerReports: string;
   ledgerCursor: string;
@@ -31,11 +34,15 @@ export function resolveStateRoot(env: NodeJS.ProcessEnv = process.env): string {
 export function resolveStatePaths(env: NodeJS.ProcessEnv = process.env): StatePaths {
   const root = resolveStateRoot(env);
   const implementationHistory = join(root, "implementation-history");
+  const implementationRoot = join(root, "implementer");
   const ledger = join(root, "subagent-use-ledger");
   return {
     root,
     config: join(root, "config.json"),
     implementationHistory,
+    implementationRoot,
+    implementationSessions: join(implementationRoot, "sessions"),
+    implementationCheckpoints: join(implementationRoot, "checkpoints"),
     ledger,
     ledgerReports: join(ledger, "reports"),
     ledgerCursor: join(ledger, "cursor.json"),
