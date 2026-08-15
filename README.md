@@ -4,9 +4,11 @@ Pinot is a set of tools for the Pi coding agent (https://pi.dev) that give Pi a 
 
 It adds six prompts, one skill, three tools, and small user-owned state/configuration plumbing. It does not replace the user’s Pi installation, agents, settings, or configuration; its namespaced resources coexist with them.
 
-It combines one-shot, background subagents for targeted tasks with subagents running in durable, reviewable Pi sessions for longer running, complex tasks. This keeps your master thread’s context as clean as possible.
+Pinot gives Pi two kinds of subagents: one-shot, background subagents for targeted tasks and an “implementer” subagent that runs in a persistent, reviewable Pi sessions for longer running, complex tasks. 
 
-For full functionality, it requires Herdr, a multi-session terminal tool built for agentic coding: https://herdr.dev/. If you’d prefer not to use Herdr, ask your Pi to modify this to work with Tmux or any other multi-session tool, or in a single session.
+The durable, long-running subagents require Herdr, a multi-session terminal tool built for agentic coding: https://herdr.dev/. If you’d prefer not to use Herdr, ask your Pi to modify this to work with Tmux or any other multi-session tool.
+
+The saved prompts are based on a straightforward planning workflow, and anticipate the use of Pinot’s subagents. As written, they are tuned for a feature development in an existing codebases or the development of apps. They can be easily modified to fit other contexts. 
 
 Pinot works well with Pi’s native compaction, or with tools like observational-memory. Note that subagents spawn without extensions, so they use Pi-native compaction (they also report their context status to the parent agent, which tries to avoid overstuffing their context).
 
@@ -30,7 +32,22 @@ pi -e git:<host>/<repository>@<tag>
 
 In Pi, run `/pinot-setup`. Then either edit `~/.pinot-pi/config.json` yourself or ask your own Pi agent to help map Pinot roles and implementer efforts to models already available in your Pi. Mappings use only the generic form `<provider>/<model>:<thinking>`; Pinot supplies no model or provider defaults.
 
-Note that the `second-opinion` tool is designed to be configured with a model from a different company than your default model. For example, if you use an OpenAI model to run /plan and /implement, ideally configure `second-opinion` with a model from another company. As of this writing, Kimi K3 is a strong choice for this role if that’s not your regular model.
+The saved prompts will use whatever model you have active in your current Pi session, and for most work, this should be a highly capable model on medium to high effort settings. Very high (“xhigh” “max”) can sometimes produce verbose outputs and scope creep. 
+
+The subagents can use smaller, cheaper models. Pinot was developed primarily with the GPT 5.6 family, with the following model assignments.
+
+| Role | Model |
+   |---|---|
+   | scout | `gpt-5.6-luna:low` |
+   | assessor | `gpt-5.6-luna:high` |
+   | reviewer | `ogpt-5.6-luna:high` |
+   | verifier | `gpt-5.6-luna:low` |
+   | second-opinion | `kimi-k3:high` |
+   | implementer | `gpt-5.6-luna:high` |
+
+Even smaller, locally usable models should be sufficient for the background subagents tasks. Users interested in using a smaller model for the implementer model (which runs in the persistent Pi session and does the heavy lifting), can modify the /plan and /implement prompts to require more narrowly defined implementation slices and subagent assignments.
+
+The `second-opinion` tool is designed to be configured with a model from a different company than your default model. For example, if you use an OpenAI model to run /plan and /implement, ideally configure `second-opinion` with a model from another company. As of this writing, Kimi K3 is a strong choice for this role if that’s not your regular model.
 
 Run `/pinot-status`, then use the prompts:
 
