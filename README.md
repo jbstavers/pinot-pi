@@ -6,7 +6,7 @@ It adds six prompts, one skill, three tools, and small user-owned state/configur
 
 Pinot gives Pi two kinds of subagents: one-shot, background subagents for targeted tasks and an “implementer” subagent that runs in a persistent, reviewable Pi sessions for longer running, complex tasks. 
 
-The durable, long-running subagents require Herdr, a multi-session terminal tool built for agentic coding: https://herdr.dev/. If you’d prefer not to use Herdr, ask your Pi to modify this to work with Tmux or any other multi-session tool.
+The durable, long-running subagents are configured to use Herdr, a multi-session terminal tool built for agentic coding: https://herdr.dev/. If you’d prefer not to use Herdr, ask your Pi to modify this to work with tmux or any other multi-session tool. Or you can use the background subagents and disable the implementer in favor of having your primary Pi agent handle implementation. 
 
 The saved prompts are based on a straightforward planning workflow, and anticipate the use of Pinot’s subagents. As written, they are tuned for a feature development in an existing codebases or the development of apps. They can be easily modified to fit other contexts. 
 
