@@ -25,13 +25,13 @@ Pinot is intended to be installed and managed by your Pi. As described below in 
 Install a reviewed Git ref with Pi:
 
 ```text
-pi install git:<host>/<repository>@<reviewed-tag>
+pi install git:github.com/jbstavers/pinot-pi@v1.0.0
 ```
 
 For a temporary current-run trial, use:
 
 ```text
-pi -e git:<host>/<repository>@<tag>
+pi -e git:github.com/jbstavers/pinot-pi@v1.0.0
 ```
 
 `-e` loads that package for the current Pi run; it is not a persistent installation.
@@ -46,7 +46,7 @@ The subagents can use smaller, cheaper models. Pinot was developed primarily wit
    |---|---|
    | scout | `gpt-5.6-luna:low` |
    | assessor | `gpt-5.6-luna:high` |
-   | reviewer | `ogpt-5.6-luna:high` |
+   | reviewer | `gpt-5.6-luna:high` |
    | verifier | `gpt-5.6-luna:low` |
    | second-opinion | `kimi-k3:high` |
    | implementer | `gpt-5.6-luna:high` |
