@@ -1,6 +1,6 @@
 # Pinot
 
-Pinot is a set of tools for the Pi coding agent that give Pi a development infrastructure for personal coding projects. It was developed to be consistent with the general Pi philosophy — it does not impose a workflow on the user, it can be easily customized, and it provides core functionality rather than a feature-rich application. 
+Pinot is a set of tools for the Pi coding agent (https://pi.dev) that give Pi a development infrastructure for personal coding projects. It was developed to be consistent with the general Pi philosophy — it does not impose a workflow on the user, it can be easily customized, and it provides core functionality rather than a feature-rich application. 
 
 It adds six prompts, one skill, three tools, and small user-owned state/configuration plumbing. It does not replace the user’s Pi installation, agents, settings, or configuration; its namespaced resources coexist with them.
 
