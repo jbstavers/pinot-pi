@@ -2,15 +2,21 @@
 
 Pinot is a set of tools for the Pi coding agent (https://pi.dev) that give Pi a development infrastructure for personal coding projects. It was developed to be consistent with the general Pi philosophy — it does not impose a workflow on the user, it can be easily customized, and it provides core functionality rather than a feature-rich application. 
 
-It adds six prompts, one skill, three tools, and small user-owned state/configuration plumbing. It does not replace the user’s Pi installation, agents, settings, or configuration; its namespaced resources coexist with them.
+It adds three tools, one skill, six prompts, and small user-owned state/configuration plumbing. It does not replace the user’s Pi installation, agents, settings, or configuration; its namespaced resources coexist with them.
 
 Pinot gives Pi two kinds of subagents: one-shot, background subagents for targeted tasks and an “implementer” subagent that runs in a persistent, reviewable Pi sessions for longer running, complex tasks. 
 
+The background subagents are simple tools, they accept guidance from the parent agent, which is combined with a prompt for their specific role, they do their thing, and they report back to the parent agent. The user typically won't call them directly. Their model selection and role prompt can be easily modified to fit other uses. 
+
 The durable, long-running subagents are configured to use Herdr, a multi-session terminal tool built for agentic coding: https://herdr.dev/. If you’d prefer not to use Herdr, ask your Pi to modify this to work with tmux or any other multi-session tool. Or you can use the background subagents and disable the implementer in favor of having your primary Pi agent handle implementation. 
 
-The saved prompts are based on a straightforward planning workflow, and anticipate the use of Pinot’s subagents. As written, they are tuned for a feature development in an existing codebases or the development of apps. They can be easily modified to fit other contexts. 
+The Janitor skill is called automatically at the completion of implementation, and can be called by the user any time. It addresses two common weaknesses of coding agents: they leave behind test outputs and other detritus, and they don't keep documentation up to date. 
 
-Pinot works well with Pi’s native compaction, or with tools like observational-memory. Note that subagents spawn without extensions, so they use Pi-native compaction (they also report their context status to the parent agent, which tries to avoid overstuffing their context).
+The saved prompts are based on a straightforward planning workflow, and anticipate the use of Pinot’s subagents. As written, they are tuned for a feature development in an existing codebases or the development of apps. Their names are self-explanatory. They can be easily modified to fit other contexts. 
+
+Pinot works well with Pi’s native compaction, and also with observational-memory. Other advanced compaction tools should generally work as well. Note that subagents spawn without extensions, so they use Pi-native compaction (they report their context status to the parent agent, which tries to avoid overstuffing their context).
+
+If you are using Pinot as part of a new Pi configuration, it benefits from a question asking tool, of which there are many (or have Pi build you one) and a web search tool, for example the popular pi-web-access. 
 
 Pinot is intended to be installed and managed by your Pi. As described below in the installation instructions, the file `PI-START-HERE.md` introduces Pinot to your Pi and helps you complete setup.
 
