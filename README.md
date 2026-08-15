@@ -70,6 +70,39 @@ After installing, ask your own Pi agent to locate and read [`PI-START-HERE.md`](
 
 The package has been tested on macOS. Other operating systems are unverified.
 
+## Optional `AGENTS.md` guidance
+
+Pinot's prompts, tool descriptions, and Janitor skill carry their own operating instructions, so no additional agent guidance is required. Users who want their ordinary Pi agent to follow the same coordination posture outside the saved prompts can adapt this short policy in their global or project `AGENTS.md`:
+
+```markdown
+## Pinot workflow
+
+For nontrivial work that the user did not explicitly request, state the
+assumed intent and proposed next action before proceeding. Ask for confirmation
+when a decision affects product behavior, scope, data, permissions, or a
+hard-to-reverse action.
+
+Use delegation only when it provides more value than its coordination cost:
+
+- Use `pinot_delegate_background` for bounded, read-only research, assessment,
+  review, or verification.
+- Use one `pinot_native_herdr_implementer` for approved production writing.
+  Keep the parent agent as coordinator and reviewer while the implementer owns
+  the edits.
+- Never silently fall back to parent-agent editing when a Pinot workflow
+  requires the durable implementer.
+- Treat a child checkpoint as a handoff, not proof. Inspect the resulting
+  changes and verify consequential claims directly.
+- Run focused tests during implementation. Use `pinot_run_test_suite` for the
+  final full-suite pass after review.
+
+Keep assignments narrow, preserve uncertain files, and do not install,
+configure, commit, push, publish, or perform destructive actions without the
+user's applicable approval.
+```
+
+Keep this policy brief and adapt it to local preferences. Model mappings belong in `~/.pinot-pi/config.json`; personal paths, provider assumptions, and detailed lifecycle rules do not need to be copied into `AGENTS.md`. Pinot's repository-level `AGENTS.md` is maintainer guidance for developing Pinot itself, not a template for adopters.
+
 ## What is included
 
 - Six generic prompt templates and the package-owned `pinot-janitor` skill.
